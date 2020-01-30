@@ -8,7 +8,7 @@ pd.set_option('display.max_columns', 50)
 pd.set_option('display.width', 500)
 
 #%% files and paths
-cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr/backup')
+cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 file_df_file = 'echo_BWH_npy_feather_files.parquet'
 
 #%% Load the file names
@@ -16,28 +16,63 @@ file_df = pd.read_parquet(os.path.join(cfr_data_root, file_df_file))
 
 #%% Filter the feather files that are needed
 feather_dsc_list_original = list(file_df.dsc.unique())
-print(*feather_dsc_list_original, sep = '\n')
 feather_dsc_list = ['video_metadata_withScale', 'viewPredictionsVideo_withRV', 'study_metadata']
+file_df2 = file_df[file_df.dsc.isin(feather_dsc_list)]
+print('Number of unique npy files: {}'.format(len(file_df2.filename.unique())))
+print('Number of studies: {}'.format(len(file_df2.study.unique())))
 
+#%% How many studies for each meta file
+df_count = file_df2.groupby('dsc')['study'].nunique()
+print(df_count)
+# This shows that there is about one study per metadata. There seems to be a few studies without metadata.
 
-#%% Studies without metadata
-#df_none_dsc = file_df.loc[file_df.dsc.isnull()]
+#%% Collect meta data from file df
 
-#%% Take a look at the meta data
-study = list(file_df.study.unique())[10]
-print(study)
-study_df = file_df[file_df.study == study]
-print(study_df.shape)
+def get_metadata(df_file, study, metacol):
+    df_studymeta = df_file[(df_file.study == study) & (df_file.dsc == metacol)]
+    metafile = os.path.join(df_studymeta.meta_dir.iloc[0], df_studymeta.meta_filename.iloc[0])
+    meta_df = pd.read_feather(metafile)
+    return meta_df
 
-# Open meta data for the first video in this study
-study_df_meta = study_df[study_df.dsc == 'viewPredictionsVideo_withRV']
-feather_file = os.path.join(study_df_meta.iloc[0].meta_dir, study_df_meta.iloc[0].meta_filename)
+def collect_meta_study(df, study):
 
-#%% Open study_metadata
-study_metadata = pd.read_feather(feather_file)
+    # Base df without the meta filenames
+    df_meta_study = df[df.study == study].drop(columns = ['meta_filename', 'meta_dir', 'dsc']).\
+        drop_duplicates().reset_index(drop = True)
+    df_meta_study = df_meta_study.assign(fileid = df_meta_study.filename.apply(lambda f: f.split('.')[0]))
 
+    # Add study_metadata
+    mdf = get_metadata(df_file = df, study = study, metacol = 'study_metadata')
+    df_meta_study = df_meta_study.assign(institution = mdf.institution.values[0],
+                                         model = mdf.model.values[0],
+                                         manufacterer = mdf.manufacturer.values[0])
+    # Add video_metadata
+    mdf = get_metadata(df_file = df, study = study, metacol = 'video_metadata_withScale')
+    mdf = mdf.assign(fileid = mdf.identifier.apply(lambda f: f.split('.')[0])).\
+        drop(columns = ['study', 'identifier'])
+    df_meta_study = df_meta_study.merge(right = mdf, on = 'fileid', how = 'left').reset_index(drop = True)
 
+    # Add view predictions
+    mdf = get_metadata(df_file = df, study = study, metacol = 'viewPredictionsVideo_withRV')
+    mdf = mdf.assign(fileid = mdf['index'].apply(lambda f: f.split('.')[0])).\
+        drop(columns = ['index'])
+    df_meta_study = df_meta_study.merge(right = mdf, on = 'fileid', how = 'left').reset_index(drop = True)
 
+    return df_meta_study
 
+# Run the function.
+df_meta_list = [] # Collect filenames with meta data
+study_list = sorted(list(file_df2.study.unique()))
+meta_filename = 'echo_BWH_meta.parquet'
+start_time = time.time()
+for s, study in enumerate(study_list):
+    df_meta_study = collect_meta_study(file_df2, study = study)
+    df_meta_list.append(df_meta_study)
+    if (s % 100 == 0):
+        print('Study {} of {}, time {:.1f} seconds.'.format(s + 1,
+                                                len(study_list),
+                                                time.time()-start_time))
 
-
+# Concat all data frames
+df_meta = pd.concat(df_meta_list, ignore_index = True).reset_index(drop = True)
+df_meta.to_parquet(os.path.join(cfr_data_root, meta_filename))
