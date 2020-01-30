@@ -86,14 +86,3 @@ df_files.to_parquet(os.path.join(cfr_data_root, npy_meta_name))
 
 #df_npy_file_2 = pd.read_parquet(os.path.join(cfr_data_root, npy_file_list_name))
 #df_feather_file_3 = pd.read_parquet(os.path.join(cfr_data_root, feather_file_list_name))
-
-#%% Look at the meta data
-npy_meta_name = 'echo_BWH_npy_feather_files.parquet'
-df_files = pd.read_parquet(os.path.join(cfr_data_root, npy_meta_name))
-
-# Pick a study
-study = list(df_files.study.unique())[10]
-df = df_files[df_files.study == study]
-
-
-

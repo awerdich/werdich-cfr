@@ -13,7 +13,6 @@ scikit-learn = "*"
 python-dotenv = "*"
 jupyterlab = "*"
 xlrd = "*"
-pycrypto = "*"
 
 [requires]
 python_version = "3.6"
