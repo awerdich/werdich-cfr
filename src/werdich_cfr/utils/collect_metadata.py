@@ -30,8 +30,11 @@ print(df_count)
 
 def get_metadata(df_file, study, metacol):
     df_studymeta = df_file[(df_file.study == study) & (df_file.dsc == metacol)]
-    metafile = os.path.join(df_studymeta.meta_dir.iloc[0], df_studymeta.meta_filename.iloc[0])
-    meta_df = pd.read_feather(metafile)
+    if df_studymeta.shape[0] > 0:
+        metafile = os.path.join(df_studymeta.meta_dir.iloc[0], df_studymeta.meta_filename.iloc[0])
+        meta_df = pd.read_feather(metafile)
+    else:
+        meta_df = pd.DataFrame()
     return meta_df
 
 def collect_meta_study(df, study):
@@ -43,31 +46,44 @@ def collect_meta_study(df, study):
 
     # Add study_metadata
     mdf = get_metadata(df_file = df, study = study, metacol = 'study_metadata')
-    df_meta_study = df_meta_study.assign(institution = mdf.institution.values[0],
-                                         model = mdf.model.values[0],
-                                         manufacterer = mdf.manufacturer.values[0])
-    # Add video_metadata
-    mdf = get_metadata(df_file = df, study = study, metacol = 'video_metadata_withScale')
-    mdf = mdf.assign(fileid = mdf.identifier.apply(lambda f: f.split('.')[0])).\
-        drop(columns = ['study', 'identifier'])
-    df_meta_study = df_meta_study.merge(right = mdf, on = 'fileid', how = 'left').reset_index(drop = True)
+    if mdf.shape[0]>0:
+        df_meta_study = df_meta_study.assign(institution = mdf.institution.values[0],
+                                             model = mdf.model.values[0],
+                                             manufacturer = mdf.manufacturer.values[0])
 
-    # Add view predictions
-    mdf = get_metadata(df_file = df, study = study, metacol = 'viewPredictionsVideo_withRV')
-    mdf = mdf.assign(fileid = mdf['index'].apply(lambda f: f.split('.')[0])).\
-        drop(columns = ['index'])
-    df_meta_study = df_meta_study.merge(right = mdf, on = 'fileid', how = 'left').reset_index(drop = True)
+    # Skip the whole extraction if there is no video metadata or view prediction
+    mdf_video = get_metadata(df_file = df, study = study, metacol = 'video_metadata_withScale')
+    mdf_view = get_metadata(df_file = df, study = study, metacol = 'viewPredictionsVideo_withRV')
 
+    if (mdf_video.shape[0]>0) & (mdf_view.shape[0]>0):
+
+        # Add video_metadata
+        mdf_video = mdf_video.assign(fileid = mdf_video.identifier.apply(lambda f: f.split('.')[0])).\
+            drop(columns = ['study', 'identifier'])
+        df_meta_study = df_meta_study.merge(right = mdf_video, on = 'fileid', how = 'left').reset_index(drop = True)
+
+        # Add view predictions
+        mdf_view = mdf_view.assign(fileid = mdf_view['index'].apply(lambda f: f.split('.')[0])).\
+            drop(columns = ['index'])
+        df_meta_study = df_meta_study.merge(right = mdf_view, on = 'fileid', how = 'left').reset_index(drop = True)
+
+    else:
+        # Return an empty df if important metadata are missing
+        df_meta_study = pd.DataFrame()
     return df_meta_study
 
-# Run the function.
+
+#%% Run the function.
 df_meta_list = [] # Collect filenames with meta data
 study_list = sorted(list(file_df2.study.unique()))
-meta_filename = 'echo_BWH_meta.parquet'
+meta_filename = 'echo_BWH_meta_100.parquet'
 start_time = time.time()
 for s, study in enumerate(study_list):
     df_meta_study = collect_meta_study(file_df2, study = study)
-    df_meta_list.append(df_meta_study)
+    if df_meta_study.shape[0] > 0:
+        df_meta_list.append(df_meta_study)
+    else:
+        print('Not enough meta data for study {}. Skipping.'.format(study))
     if (s % 100 == 0):
         print('Study {} of {}, time {:.1f} seconds.'.format(s + 1,
                                                 len(study_list),
