@@ -58,7 +58,6 @@ docs/_build
 .build
 .ve
 .env
-*.env
 .cache
 .pytest
 .bootstrap
@@ -67,6 +66,3 @@ docs/_build
 
 # Mypy Cache
 .mypy_cache/
-
-# Jupyter checkpoints
-.ipynb_checkpoints
