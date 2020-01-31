@@ -76,7 +76,7 @@ def collect_meta_study(df, study):
 #%% Run the function.
 df_meta_list = [] # Collect filenames with meta data
 study_list = sorted(list(file_df2.study.unique()))
-meta_filename = 'echo_BWH_meta_100.parquet'
+meta_filename = 'echo_BWH_meta.parquet'
 start_time = time.time()
 for s, study in enumerate(study_list):
     df_meta_study = collect_meta_study(file_df2, study = study)
@@ -84,11 +84,15 @@ for s, study in enumerate(study_list):
         df_meta_list.append(df_meta_study)
     else:
         print('Not enough meta data for study {}. Skipping.'.format(study))
-    if (s % 100 == 0):
+    if (s+1) % 100 == 0:
         print('Study {} of {}, time {:.1f} seconds.'.format(s + 1,
                                                 len(study_list),
                                                 time.time()-start_time))
 
 # Concat all data frames
 df_meta = pd.concat(df_meta_list, ignore_index = True).reset_index(drop = True)
+
+# Make sure that we have consistent types in numeric columns
+num_cols = ['frame_time', 'number_of_frames', 'heart_rate', 'deltaX', 'deltaY']
+df_meta.loc[:, num_cols] = df_meta[num_cols].apply(pd.to_numeric, errors = 'coerce')
 df_meta.to_parquet(os.path.join(cfr_data_root, meta_filename))

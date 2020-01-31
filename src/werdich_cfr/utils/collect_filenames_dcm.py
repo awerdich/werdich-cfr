@@ -8,7 +8,7 @@ import time
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
-pd.set_option('display.width', 500)
+pd.set_option('display.width', 1000)
 
 #%% Files, directories and parameters
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
@@ -52,9 +52,9 @@ def decode_file(filename):
 
 def add_base_name_mrn_datetime(df):
 
-    df = df.assign(study=df.fileid.apply(lambda s: decode_file(s)[0]),
-                   mrn=df.fileid.apply(lambda s: decode_file(s)[1][0]),
-                   datetime=df.fileid.apply(lambda s: decode_file(s)[1][1]))
+    df = df.assign(study=df.study.apply(lambda s: decode_file(s)[0]),
+                   mrn=df.study.apply(lambda s: decode_file(s)[1][0]),
+                   datetime=df.study.apply(lambda s: decode_file(s)[1][1]))
 
     df.datetime = pd.to_datetime(df.datetime, infer_datetime_format=True)
 
@@ -62,14 +62,18 @@ def add_base_name_mrn_datetime(df):
 
 #%% Load the file name lists
 
-file_list_name = 'echo_deIdentifyedEcho_BWH.parquet'
+file_list_name = 'echo_deIdentifyedEcho_BWH_dcm.parquet'
 #test_dir = os.path.normpath('/mnt/obi0/phi/echo/deIdentifyedEcho/BWH/48b0')
-test_dir = os.path.normpath('/home/andreas/test')
-df_file = collect_files(test_dir)
-#df_file = collect_files(dcm_echo_dir)
+#df_file = collect_files(test_dir)
+df = collect_files(dcm_echo_dir)
 
 # Decode MRN and STUDY DATE
-df_file = df_file.assign(fileid = df_file.dir.apply(lambda f: os.path.basename(f)))
-df_file = add_base_name_mrn_datetime(df_file)
-#df_file.to_parquet(os.path.join(cfr_data_root, file_list_name))
+df = df.assign(study = df.dir.apply(lambda f: os.path.basename(f)))
+# We are only interested in directories that can be split into mrn and date
+# Filter out those directories that cannot be split into two parts (some random directories)
+df = df.assign(l = df.study.apply(lambda f: len(f.split('_'))))
+df = df.drop(df.loc[df.l<2].index).drop(columns = ['l'], axis = 1).reset_index(drop = True)
+df = add_base_name_mrn_datetime(df)
 
+# At last, save all files
+df.to_parquet(os.path.join(cfr_data_root, file_list_name))
