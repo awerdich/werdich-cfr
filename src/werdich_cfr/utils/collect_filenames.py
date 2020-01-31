@@ -17,17 +17,20 @@ cfr_feather_dir = os.path.normpath('/mnt/obi0/phi/echo/featherFiles/BWH')
 key='rahuldeoechobwh*'
 iv='echoisexcellent*'
 
-def collect_files(topdir):
+def collect_files(topdir, file_pattern = '*.npy.lz4'):
 
     """ Collects the file names in all sub-directories of dir """
 
     print('Start collecting files...')
     start_time = time.time()
     file_list = list()
-    for (dirpath, dirnames, filenames) in os.walk(topdir):
-        file_list += [os.path.join(dirpath, file) for file in filenames]
+    for i, (dirpath, dirnames, filenames) in enumerate(os.walk(topdir)):
+        file_list += glob.glob(os.path.join(dirpath, file_pattern))
+        #file_list += [os.path.join(dirpath, file) for file in filenames]
+        if (i+1)%1000 == 0:
+            print('Completed {} directories in {:.1f} seconds.'.format(i+1, time.time()-start_time))
 
-    print('Completed. This took {:.2f} seconds.'.format(time.time()-start_time))
+    print('Completed. This took {:.1f} seconds.'.format(time.time()-start_time))
 
     # Stick it in a data frame
     df = pd.DataFrame({'path': file_list})
@@ -53,6 +56,12 @@ def decode_file(filename):
 
 def add_base_name_mrn_datetime(df):
 
+    # Before we can split the filename in mrn and date
+    # We want to be sure that at least it has two parts
+    df = df.assign(l = df.filename.apply(lambda f: len(f.split('_'))))
+    df = df.drop(df.loc[df.l<2].index).drop(columns = ['l'], axis = 1).reset_index(drop = True)
+
+    # Now we should have only rows in the filename column that can be split into at least two parts
     df = df.assign(study=df.filename.apply(lambda s: decode_file(s)[0]),
                    mrn=df.filename.apply(lambda s: decode_file(s)[1][0]),
                    datetime=df.filename.apply(lambda s: decode_file(s)[1][1]))
@@ -61,14 +70,14 @@ def add_base_name_mrn_datetime(df):
 
     return df
 
-#%% Load the file name lists
+#%% Run the search
 
-npy_file_list_name = 'echo_npyFiles_BWH.parquet'
+npy_file_list_name = 'echo_npyFiles_BWH_200131.parquet'
 df_npy_file = collect_files(cfr_echo_dir)
 df_npy_file_2 = add_base_name_mrn_datetime(df_npy_file)
 df_npy_file_2.to_parquet(os.path.join(cfr_data_root, npy_file_list_name))
 
-feather_file_list_name = 'echo_featherFiles_BWH.parquet'
+feather_file_list_name = 'echo_featherFiles_BWH_200131.parquet'
 df_feather_file = collect_files(cfr_feather_dir)
 df_feather_file_2 = add_base_name_mrn_datetime(df_feather_file)
 df_feather_file_3 = df_feather_file_2.assign(dsc = df_feather_file_2.filename.apply(
@@ -81,8 +90,5 @@ df_files = df_npy_file_2.merge(right = df_feather_file_3, how = 'left', on = ['s
 
 # Join npy_file_list and feather_file_list
 # Rename some of the feather data columns
-npy_meta_name = 'echo_BWH_npy_feather_files.parquet'
+npy_meta_name = 'echo_BWH_npy_feather_files_201031.parquet'
 df_files.to_parquet(os.path.join(cfr_data_root, npy_meta_name))
-
-#df_npy_file_2 = pd.read_parquet(os.path.join(cfr_data_root, npy_file_list_name))
-#df_feather_file_3 = pd.read_parquet(os.path.join(cfr_data_root, feather_file_list_name))
