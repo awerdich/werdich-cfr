@@ -73,12 +73,12 @@ def add_base_name_mrn_datetime(df):
 #%% Run the search
 
 npy_file_list_name = 'echo_npyFiles_BWH_200131.parquet'
-df_npy_file = collect_files(cfr_echo_dir)
+df_npy_file = collect_files(cfr_echo_dir, file_pattern = '*.npy.lz4')
 df_npy_file_2 = add_base_name_mrn_datetime(df_npy_file)
 df_npy_file_2.to_parquet(os.path.join(cfr_data_root, npy_file_list_name))
 
 feather_file_list_name = 'echo_featherFiles_BWH_200131.parquet'
-df_feather_file = collect_files(cfr_feather_dir)
+df_feather_file = collect_files(cfr_feather_dir, file_pattern = '*.feather')
 df_feather_file_2 = add_base_name_mrn_datetime(df_feather_file)
 df_feather_file_3 = df_feather_file_2.assign(dsc = df_feather_file_2.filename.apply(
     lambda s: os.path.splitext(s)[0].replace(decode_file(s)[0], '')[1:]))
