@@ -12,7 +12,7 @@ cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 file_df_file = 'echo_BWH_npy_feather_files_201031.parquet'
 
 #%% Load the file names
-file_df = pd.read_parquet(os.path.join(cfr_data_root, file_df_file))
+file_df = pd.read_parquet(os.path.join(cfr_data_root, 'metadata_200131', file_df_file))
 
 #%% Filter the feather files that are needed
 feather_dsc_list_original = list(file_df.dsc.unique())
@@ -33,6 +33,7 @@ def get_metadata(df_file, study, metacol):
     if df_studymeta.shape[0] > 0:
         metafile = os.path.join(df_studymeta.meta_dir.iloc[0], df_studymeta.meta_filename.iloc[0])
         meta_df = pd.read_feather(metafile)
+        meta_df = meta_df.drop(columns = ['index'])
     else:
         meta_df = pd.DataFrame()
     return meta_df
