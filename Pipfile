@@ -16,6 +16,7 @@ xlrd = "*"
 bokeh = "*"
 matplotlib = "*"
 opencv-python = "*"
+ipywidgets = "*"
 
 [requires]
 python_version = "3.6"
