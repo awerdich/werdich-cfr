@@ -26,7 +26,6 @@ def collect_files(topdir, file_pattern = '*.npy.lz4'):
     file_list = list()
     for i, (dirpath, dirnames, filenames) in enumerate(os.walk(topdir)):
         file_list += glob.glob(os.path.join(dirpath, file_pattern))
-        #file_list += [os.path.join(dirpath, file) for file in filenames]
         if (i+1)%1000 == 0:
             print('Completed {} directories in {:.1f} seconds.'.format(i+1, time.time()-start_time))
 
@@ -72,12 +71,12 @@ def add_base_name_mrn_datetime(df):
 
 #%% Run the search
 
-npy_file_list_name = 'echo_npyFiles_BWH_200202.parquet'
+npy_file_list_name = 'echo_npyFiles_BWH_200131.parquet'
 df_npy_file = collect_files(cfr_echo_dir, file_pattern = '*.npy.lz4')
 df_npy_file_2 = add_base_name_mrn_datetime(df_npy_file)
 df_npy_file_2.to_parquet(os.path.join(cfr_data_root, npy_file_list_name))
 
-feather_file_list_name = 'echo_featherFiles_BWH_200202.parquet'
+feather_file_list_name = 'echo_featherFiles_BWH_200131.parquet'
 df_feather_file = collect_files(cfr_feather_dir, file_pattern = '*.feather')
 df_feather_file_2 = add_base_name_mrn_datetime(df_feather_file)
 df_feather_file_3 = df_feather_file_2.assign(dsc = df_feather_file_2.filename.apply(
@@ -90,5 +89,5 @@ df_files = df_npy_file_2.merge(right = df_feather_file_3, how = 'left', on = ['s
 
 # Join npy_file_list and feather_file_list
 # Rename some of the feather data columns
-npy_meta_name = 'echo_BWH_npy_feather_files_200202.parquet'
+npy_meta_name = 'echo_BWH_npy_feather_files_200131.parquet'
 df_files.to_parquet(os.path.join(cfr_data_root, npy_meta_name))

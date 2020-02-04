@@ -12,28 +12,32 @@ pd.set_option('display.width', 1000)
 
 #%% Files, directories and parameters
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+meta_date = '200202'
+meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
+
 dcm_echo_dir = os.path.normpath('/mnt/obi0/phi/echo/deIdentifyedEcho/BWH')
 key='rahuldeoechobwh*'
 iv='echoisexcellent*'
 
-def collect_files(topdir):
+#%% Functions
+
+def collect_files(topdir, file_pattern = '*.dcm'):
 
     """ Collects the file names in all sub-directories of dir """
 
     print('Start collecting files...')
     start_time = time.time()
     file_list = list()
-    for (dirpath, dirnames, filenames) in os.walk(topdir):
-        file_list += [os.path.join(dirpath, file) for file in filenames]
-
-    print('Completed. This took {:.2f} seconds.'.format(time.time()-start_time))
+    for i, (dirpath, dirnames, filenames) in enumerate(os.walk(topdir)):
+        file_list += glob.glob(os.path.join(dirpath, file_pattern))
+        if (i + 1) % 1000 == 0:
+            print('Completed {} directories in {:.1f} seconds.'.format(i + 1, time.time() - start_time))
 
     # Stick it in a data frame
     df = pd.DataFrame({'path': file_list})
     df = df.assign(filename=df.path.apply(lambda f: os.path.basename(f)),
                    dir=df.path.apply(lambda f: os.path.dirname(f))).drop(columns=['path']). \
         reset_index(drop=True)
-
     return df
 
 def decodeMRN(MRN, key, iv):
@@ -62,9 +66,9 @@ def add_base_name_mrn_datetime(df):
 
 #%% Load the file name lists
 
-file_list_name = 'echo_deIdentifyedEcho_BWH_dcm.parquet'
+file_list_name = 'echo_deIdentifyedEcho_BWH_dcm_'+meta_date+'.parquet'
 #test_dir = os.path.normpath('/mnt/obi0/phi/echo/deIdentifyedEcho/BWH/48b0')
-#df_file = collect_files(test_dir)
+#df = collect_files(test_dir)
 df = collect_files(dcm_echo_dir)
 
 # Decode MRN and STUDY DATE
@@ -75,5 +79,4 @@ df = df.assign(l = df.study.apply(lambda f: len(f.split('_'))))
 df = df.drop(df.loc[df.l<2].index).drop(columns = ['l'], axis = 1).reset_index(drop = True)
 df = add_base_name_mrn_datetime(df)
 
-# At last, save all files
-df.to_parquet(os.path.join(cfr_data_root, file_list_name))
+df.to_parquet(os.path.join(meta_dir, file_list_name))
