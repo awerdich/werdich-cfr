@@ -9,7 +9,7 @@ pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 
 # Custom import
-from tfutils.TFRprovider import Dset
+from werdich_cfr.tfutils.TFRprovider import Dset
 
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
@@ -17,7 +17,7 @@ meta_date = '200202'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
 meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
-max_samples_per_file = 15
+max_samples_per_file = 2000
 
 # This should give us ~75% qualified files
 min_rate = 20 # Minimum acceptable frame rage [fps]
@@ -88,71 +88,77 @@ def subsample_video(image_array, frame_time, min_rate, min_frames):
 
 #%% Select one view and process files
 
-view_list = sorted(list(meta_df.max_view.unique()))
-mode_list = sorted(list(meta_df.dset.unique()))
+view = 'view_a4c'
+#for view in meta_df.max_view.unique():
 
-# LOOP 1: VIEWS
-view = view_list[2]
+for mode in meta_df.dset.unique():
 
-# LOOP 2: MODE
-mode = mode_list[2]
+    # Filter view, mode and rates. Shuffle.
+    df = meta_df[(meta_df.max_view == view) & (meta_df.dset == mode) & (meta_df.frame_time < max_frame_time)].\
+                                                                                                sample(frac=1)
+    print('View:{}, mode:{}, min_rate:{}, n_videos:{}'.format(view, mode, min_rate, len(df.filename.unique())))
 
-# Filter view, mode and rates. Shuffle.
-df = meta_df[(meta_df.max_view == view) & (meta_df.dset == mode) & (meta_df.frame_time < max_frame_time)].\
-                                                                                            sample(frac=1)
-print('View:{}, mode:{}, min_rate:{}, n_videos:{}'.format(view, mode, min_rate, len(df.filename.unique())))
+    file_list_complete = list(df.filename.unique())
+    # Split filename_list into multiple parts
+    file_list_parts = list(chunks(file_list_complete, max_samples_per_file))
+    mag = int(np.floor(np.log10(len(file_list_parts)))) + 1
 
+    # Each part will have its own TFR filename
+    for part, file_list in enumerate(file_list_parts):
+        print()
+        print('Processing TFR part {} of {}'.format(part+1, len(file_list_parts)))
 
-# LOOP 3: FILES loop over all file names
-file_list_complete = list(df.filename.unique())[0:30]
-# Split filename_list into multiple parts
-file_list_parts = list(chunks(file_list_complete, max_samples_per_file))
-mag = int(np.floor(np.log10(len(file_list_parts)))) + 1
+        # TFR filename
+        tfr_basename = 'CFR_'+meta_date+'_'+view+'_'+mode+'_'+str(part).zfill(mag)
+        tfr_filename = tfr_basename+'.tfrecords'
+        parquet_filename = tfr_basename+'.parquet'
 
-# Each part will have its own TFR filename
-part = 0
+        im_array_list = [] # list of image arrays [row, col, frame]
+        im_array_ser_list = [] # list of pd.Series object for the files in im_array_list
+        im_failed_ser_list = [] # list of pd.Series objects for failed videos
+        cfr_list = []
+        record_list = []
 
-# TFR filename
-tfr_basename = 'CFR_'+view+'_'+mode+'_'+str(part).zfill(mag)
-tfr_filename = tfr_basename+'.tfrecords'
-parquet_filename = tfr_basename+'.tfrecords'
-file_list = file_list_parts[part]
+        for f, filename in enumerate(file_list):
 
-im_array_list = [] # list of image arrays [row, col, frame]
-im_array_ser_list = [] # list of pd.Series object for the files in im_array_list
-im_failed_ser_list = [] # list of pd.Series objects for failed videos
-cfr_list = []
-record_list = []
+            if (f+1)%200==0:
+                print('Loading video {} of {} into memory.'.format(f+1, len(file_list)))
 
-for f, filename in enumerate(file_list):
+            ser_df = df.loc[df.filename == filename, :]
+            ser = ser_df.iloc[0]
+            file = os.path.join(ser.dir, filename)
 
-    if (f+1)%5==0:
-        print('Loading video {} of {} into memory.'.format(f+1, len(file_list)))
+            try:
+                with lz4.frame.open(file, 'rb') as fp:
+                    data = np.load(fp)
 
-    ser = df.loc[df.filename == filename, :].iloc[0]
-    file = os.path.join(ser.dir, filename)
+            except IOError as err:
+                print('Could not open this file: {}\n {}'.format(file, err))
+                im_failed_ser_list.append(ser_df)
+            else:
+                im_array_original = data2imarray(data)
+                frame_time = ser.frame_time * 1e-3
+                convert_video, im_array = subsample_video(image_array=im_array_original,
+                                                          frame_time=frame_time,
+                                                          min_rate=min_rate,
+                                                          min_frames=min_frames)
+                if convert_video:
+                    # SUCCESS: save this video in list
+                    im_array_list.append(im_array)
+                    cfr_list.append(ser.cfr)
+                    record_list.append(ser.name)
+                    im_array_ser_list.append(ser_df)
+                else:
+                    im_failed_ser_list.append(ser_df)
 
-    try:
-        with lz4.frame.open(file, 'rb') as fp:
-            data = np.load(fp)
+        # Write TFR file
+        TFR_saver = Dset(data_root=os.path.join(cfr_data_root,'tfrdata'))
+        print()
+        TFR_saver.create_tfr(filename=tfr_filename,
+                             image_data=im_array_list,
+                             cfr_data=cfr_list,
+                             record_data=record_list)
 
-    except IOError as err:
-        print('Could not open this file: {}\n {}'.format(file, err))
-        im_failed_ser_list.append(ser)
-    else:
-        im_array_original = data2imarray(data)
-        frame_time = ser.frame_time * 1e-3
-        convert_video, im_array = subsample_video(image_array=im_array_original,
-                                                  frame_time=frame_time,
-                                                  min_rate=min_rate,
-                                                  min_frames=min_frames)
-        if convert_video:
-            # SUCCESS: save this video in list
-            im_array_list.append(im_array)
-            cfr_list.append(ser.cfr)
-            record_list.append(ser.name)
-            im_array_ser_list.append(ser)
-        else:
-            im_failed_ser_list.append(ser)
-
-# Write TFR file
+        # When this is done, save the parquet file
+        im_array_df = pd.concat(im_array_ser_list)
+        im_array_df.to_parquet(os.path.join(cfr_data_root, 'tfrdata', parquet_filename))
