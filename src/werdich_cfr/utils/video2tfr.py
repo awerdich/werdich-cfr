@@ -8,15 +8,21 @@ pd.set_option('display.max_rows', 50)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 
+# Custom import
+from tfutils.TFRprovider import Dset
+
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200131'
+meta_date = '200202'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-cfr_meta_file = '210_getStressTest_files_dset_BWH_'+meta_date+'.parquet'
+cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
 meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 max_samples_per_file = 15
-min_rate = 25 # Minimum acceptable frame rage
-min_frames = 40 # Minimum number of frames at min_rate (1.6 s)
+
+# This should give us ~75% qualified files
+min_rate = 20 # Minimum acceptable frame rage [fps]
+min_frames = 30 # Minimum number of frames at min_rate (1.5 s)
+max_frame_time = 1/min_rate*1e3 # Maximum frame time [ms]
 
 #%% Support functions
 
@@ -25,21 +31,21 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-def imscale(im):
+def im_scale(im):
     """ convert single images to uint8 and contrast en"""
     # We can do other things here: e.g. background subtraction or contrast enhancement
     im_scaled = np.uint8((im - np.amin(im))/(np.amax(im) - np.amin(im))*256)
-    im_scaled_eq = im_scaled
     #im_scaled_eq = cv2.equalizeHist(im_scaled)
-    return im_scaled_eq
+    return im_scaled
 
-def im_array_scale(im_data):
+def data2imarray(im_data):
     """
     apply imscale function to np.array
     arg: im_array (frame, height, width)
     returns: im_array (height, width, frame)
     """
-    im_list = [imscale(data[im]) for im in range(im_data.shape[0])]
+    im_data = np.squeeze(im_data)
+    im_list = [im_scale(im_data[im]) for im in range(im_data.shape[0])]
     im_array = np.array(im_list, dtype=np.uint16)
     im_array = np.moveaxis(im_array, 0, -1)
     return im_array
@@ -75,18 +81,12 @@ def subsample_video(image_array, frame_time, min_rate, min_frames):
         # Select the frames from the video
         image_array = image_array[:, :, time_index_list]
     else:
-        print('Frame rate: {:.1f}fps or length: {:.1f}s are note suitable. Skipping.'.format(rate, video_len))
+        print('Frame rate: {:.1f} fps, length: {:.1f} s. Skipping.'.format(rate, video_len))
         convert_video = False
 
     return convert_video, image_array
 
 #%% Select one view and process files
-# There should be no empty rows. But sometimes this could happen (when new data is added to the drives)
-
-# Remove empty rows (where we are missing view classification)
-meta_df = meta_df.loc[~meta_df.max_view.isnull()]
-
-# Filter low rates and short videos
 
 view_list = sorted(list(meta_df.max_view.unique()))
 mode_list = sorted(list(meta_df.dset.unique()))
@@ -97,8 +97,11 @@ view = view_list[2]
 # LOOP 2: MODE
 mode = mode_list[2]
 
-# Filter view and mode. Shuffle.
-df = meta_df[(meta_df.max_view == view) & (meta_df.dset == mode)].sample(frac = 1)
+# Filter view, mode and rates. Shuffle.
+df = meta_df[(meta_df.max_view == view) & (meta_df.dset == mode) & (meta_df.frame_time < max_frame_time)].\
+                                                                                            sample(frac=1)
+print('View:{}, mode:{}, min_rate:{}, n_videos:{}'.format(view, mode, min_rate, len(df.filename.unique())))
+
 
 # LOOP 3: FILES loop over all file names
 file_list_complete = list(df.filename.unique())[0:30]
@@ -137,12 +140,12 @@ for f, filename in enumerate(file_list):
         print('Could not open this file: {}\n {}'.format(file, err))
         im_failed_ser_list.append(ser)
     else:
-        data = np.squeeze(data)
-        im_array_original = im_array_scale(data)
+        im_array_original = data2imarray(data)
         frame_time = ser.frame_time * 1e-3
-        convert_video, im_array = subsample_video(image_array = im_array_original,
-                                                  frame_time = frame_time,
-                                                  min_rate = min_rate)
+        convert_video, im_array = subsample_video(image_array=im_array_original,
+                                                  frame_time=frame_time,
+                                                  min_rate=min_rate,
+                                                  min_frames=min_frames)
         if convert_video:
             # SUCCESS: save this video in list
             im_array_list.append(im_array)
@@ -151,3 +154,5 @@ for f, filename in enumerate(file_list):
             im_array_ser_list.append(ser)
         else:
             im_failed_ser_list.append(ser)
+
+# Write TFR file
