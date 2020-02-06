@@ -195,21 +195,21 @@ class DatasetProvider:
                         'score_output': cfr})
         return outputs
 
-    def make_batch(self, batch_size, shuffle):
+    def make_batch(self, batch_size, shuffle, buffer_n_batches=100):
 
         # Shuffle data
         if shuffle:
+
+            n_parallel_calls = tf.data.experimental.AUTOTUNE
 
             files = tf.data.Dataset.list_files(self.tfr_file_list, shuffle = True)
 
             dataset = files.interleave(tf.data.TFRecordDataset,
                                        cycle_length = len(self.tfr_file_list),
-                                       num_parallel_calls = tf.data.experimental.AUTOTUNE)
+                                       num_parallel_calls = n_parallel_calls)
 
-            dataset = dataset.shuffle(buffer_size = 100 * batch_size,
+            dataset = dataset.shuffle(buffer_size = buffer_n_batches * batch_size,
                                       reshuffle_each_iteration = True)
-
-            n_parallel_calls = tf.data.experimental.AUTOTUNE
 
         else:
             dataset = tf.data.TFRecordDataset(self.tfr_file_list)

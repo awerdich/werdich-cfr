@@ -25,7 +25,7 @@ class VideoTrainer:
         self.model_dict = model_dict # Model parameter
         self.train_dict = train_dict # Training parameter
 
-    def build_dataset(self, tfr_files, batch_size, repeat_count = None, shuffle = False):
+    def build_dataset(self, tfr_files, batch_size, buffer_n_batches, repeat_count = None, shuffle = False):
         """ Create TFR dataset object as input to the network
         """
         dset_provider = DatasetProvider(tfr_files,
@@ -35,7 +35,9 @@ class VideoTrainer:
                                         output_height=self.model_dict['im_size'][0],
                                         output_width=self.model_dict['im_size'][1])
 
-        dataset = dset_provider.make_batch(batch_size=batch_size, shuffle=shuffle)
+        dataset = dset_provider.make_batch(batch_size=batch_size,
+                                           shuffle=shuffle,
+                                           buffer_n_batches=buffer_n_batches)
 
         # We need steps_per_epoch: number of samples in tfr_files. We can use the .parquet files
         parquet_files = [file.split('.')[0]+'.parquet' for file in tfr_files]
@@ -48,8 +50,8 @@ class VideoTrainer:
         """ Set up the model with loss functions, metrics, etc
         arg: Cnn3D.Convmodel
         """
-        model = Convmodel(model_dict = self.model_dict).video_encoder()
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
+
+        # Define loss, metrics and optimizer
 
         loss = {'class_output': tf.keras.losses.CategoricalCrossentropy(),
                 'score_output': tf.keras.losses.MeanSquaredError()}
@@ -60,10 +62,17 @@ class VideoTrainer:
         metrics = {'class_output': tf.keras.metrics.CategoricalAccuracy(),
                    'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
 
-        model.compile(loss=loss,
-                      optimizer=optimizer,
-                      metrics=metrics,
-                      loss_weights=loss_weights)
+        optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
+
+        # Build the model
+        mirrored_strategy = tf.distribute.MirroredStrategy()
+        with mirrored_strategy.scope():
+
+            model = Convmodel(model_dict = self.model_dict).video_encoder()
+            model.compile(loss=loss,
+                          optimizer=optimizer,
+                          metrics=metrics,
+                          loss_weights=loss_weights)
 
         return model
 
@@ -95,11 +104,13 @@ class VideoTrainer:
 
         n_train, train_set = self.build_dataset(train_tfr_files,
                                                 batch_size=train_batch_size,
+                                                buffer_n_batches=self.train_dict['buffer_n_batches_train'],
                                                 repeat_count=None,
                                                 shuffle=True)
 
         n_eval, eval_set = self.build_dataset(eval_tfr_files,
                                               batch_size=eval_batch_size,
+                                              buffer_n_batches=self.train_dict['buffer_n_batches_train'],
                                               repeat_count = 1,
                                               shuffle = True)
 

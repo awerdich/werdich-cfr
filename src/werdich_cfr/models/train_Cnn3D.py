@@ -33,13 +33,15 @@ model_dict = {'name': model_name,
 train_dict = {'learning_rate': 0.0001,
               'loss_weights_class_ouput': 1.0,
               'loss_weights_score_output': 9.0,
-              'train_batch_size': 8,
-              'eval_batch_size': 8,
-              'test_batch_size': 9,
+              'train_batch_size': 20,
+              'eval_batch_size': 20,
+              'test_batch_size': 20,
               'validation_batches': 50,
               'validation_freq': 1,
-              'epochs': 3,
-              'verbose': 1}
+              'epochs': 10,
+              'verbose': 1,
+              'buffer_n_batches_train': 20,
+              'buffer_n_batches_eval': 5}
 
 trainer = VideoTrainer(log_dir=log_dir,
                        model_dict=model_dict,
@@ -49,4 +51,4 @@ convmodel = trainer.compile_convmodel()
 convmodel.summary()
 
 # Run the training for 3 epochs as a test
-trainer.train(convmodel, train_files, eval_files)
+hist = trainer.train(convmodel, train_files, eval_files)
