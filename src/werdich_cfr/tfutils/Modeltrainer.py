@@ -1,12 +1,15 @@
 import os
 import glob
 import pandas as pd
+import numpy as np
 
 pd.set_option('display.max_rows', 50)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 
 import tensorflow as tf
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
+
 print('TensorFlow Version:', tf.__version__)
 
 # Custom imports
@@ -16,6 +19,7 @@ from werdich_cfr.models.Cnn3D import Convmodel
 #%% Video trainer
 
 class VideoTrainer:
+
     def __init__(self, log_dir, model_dict, train_dict):
         self.log_dir = log_dir
         self.model_dict = model_dict # Model parameter
@@ -25,13 +29,13 @@ class VideoTrainer:
         """ Create TFR dataset object as input to the network
         """
         dset_provider = DatasetProvider(tfr_files,
-                                        repeat_count = None,
-                                        n_frames = self.model_dict['n_frames'],
-                                        cfr_boundaries = self.model_dict['cfr_boundaries'],
-                                        output_height = self.model_dict['im_size'][0],
-                                        output_width = self.model_dict['im_size'][1])
+                                        repeat_count=repeat_count,
+                                        n_frames=self.model_dict['n_frames'],
+                                        cfr_boundaries=self.model_dict['cfr_boundaries'],
+                                        output_height=self.model_dict['im_size'][0],
+                                        output_width=self.model_dict['im_size'][1])
 
-        dataset = dset_provider.make_batch(batch_size = batch_size, shuffle = shuffle)
+        dataset = dset_provider.make_batch(batch_size=batch_size, shuffle=shuffle)
 
         # We need steps_per_epoch: number of samples in tfr_files. We can use the .parquet files
         parquet_files = [file.split('.')[0]+'.parquet' for file in tfr_files]
@@ -50,8 +54,8 @@ class VideoTrainer:
         loss = {'class_output': tf.keras.losses.CategoricalCrossentropy(),
                 'score_output': tf.keras.losses.MeanSquaredError()}
 
-        loss_weights = {'class_output': train_dict['loss_weights_class_ouput'],
-                        'score_output': train_dict['loss_weights_score_output']}
+        loss_weights = {'class_output': self.train_dict['loss_weights_class_ouput'],
+                        'score_output': self.train_dict['loss_weights_score_output']}
 
         metrics = {'class_output': tf.keras.metrics.CategoricalAccuracy(),
                    'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
@@ -63,36 +67,53 @@ class VideoTrainer:
 
         return model
 
+    def create_callbacks(self):
+        """ Callbacks for model checkpoints and tensorboard visualizations """
+        checkpoint_name = self.model_dict['name']+'_chkpt_{epoch:02d}'+'.hdf5'
+        checkpoint_file = os.path.join(self.log_dir, checkpoint_name)
+
+        checkpoint_callback = ModelCheckpoint(filepath=checkpoint_file,
+                                              monitor='val_loss',
+                                              verbose=1,
+                                              save_best_only=False,
+                                              save_freq='epoch')
+
+        tensorboard_callback = TensorBoard(log_dir=self.log_dir,
+                                           histogram_freq=1,
+                                           write_graph=True,
+                                           update_freq=100,
+                                           embeddings_freq=0)
+
+        callback_list = [checkpoint_callback, tensorboard_callback]
+
+        return callback_list
+
     def train(self, model, train_tfr_files, eval_tfr_files):
 
-        pass
+        train_batch_size = self.train_dict['train_batch_size']
+        eval_batch_size = self.train_dict['eval_batch_size']
 
-#%% Test parameters
-tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200202')
-log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log')
-p_list = [1.247, 1.583, 2.075]
-im_size = (299, 299, 1)
-n_frames = 30
+        n_train, train_set = self.build_dataset(train_tfr_files,
+                                                batch_size=train_batch_size,
+                                                repeat_count=None,
+                                                shuffle=True)
 
-# Model parameters
-model_dict = {'name': 'testmodel_a4c',
-              'im_size': (299, 299, 1),
-              'n_frames': 30,
-              'cfr_boundaries': p_list,
-              'cl_outputs': len(p_list)+1,
-              'filters': 32,
-              'pool_nodes': 256,
-              'fc_nodes': 256,
-              'fullnet': True}
+        n_eval, eval_set = self.build_dataset(eval_tfr_files,
+                                              batch_size=eval_batch_size,
+                                              repeat_count = 1,
+                                              shuffle = True)
 
-train_dict = {'learning_rate': 0.0001,
-              'loss_weights_class_ouput': 1.0,
-              'loss_weights_score_output': 9.0}
+        hist = model.fit(x=train_set,
+                         epochs=self.train_dict['epochs'],
+                         verbose=self.train_dict['verbose'],
+                         validation_data=eval_set,
+                         initial_epoch=0,
+                         steps_per_epoch=int(np.floor(n_train/train_batch_size)),
+                         validation_steps=self.train_dict['validation_batches'],
+                         validation_freq=self.train_dict['validation_freq'],
+                         callbacks=self.create_callbacks())
 
-trainer = VideoTrainer(log_dir=log_dir,
-                       model_dict=model_dict,
-                       train_dict=train_dict)
+        # After fit, save the model and weights
+        model.save(os.path.join(self.log_dir, self.model_dict['model_name']+'.h5'))
 
-train_files = sorted(glob.glob(os.path.join(tfr_dir, 'CFR_200202_view_a4c_train_*.tfrecords')))
-n_train, train_set = trainer.build_dataset(train_files, 8, shuffle = False)
-model = trainer.compile_convmodel()
+        return hist
