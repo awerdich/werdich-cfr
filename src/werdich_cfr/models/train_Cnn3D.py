@@ -1,5 +1,6 @@
 import os
 import glob
+import pickle
 
 # Custom imports
 from werdich_cfr.tfutils.Modeltrainer import VideoTrainer
@@ -52,3 +53,7 @@ convmodel.summary()
 
 # Run the training for 3 epochs as a test
 hist = trainer.train(convmodel, train_files, eval_files)
+
+# Fit history
+with open(os.path.join(log_dir, model_name+'_hist.pickle'), 'wb') as f:
+    pickle.dump(hist.history, f, protocol = pickle.HIGHEST_PROTOCOL)
