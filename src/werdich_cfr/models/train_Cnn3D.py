@@ -16,12 +16,10 @@ eval_files = glob.glob(os.path.join(tfr_dir, 'CFR_200202_view_a4c_eval_*.tfrecor
 test_files = glob.glob(os.path.join(tfr_dir, 'CFR_200202_view_a4c_test_*.tfrecords'))
 
 # Model name
-base_name = os.path.basename(train_files[0]).split('.')[0].split('_',maxsplit=1)[-1].replace('_','')
-model_name = base_name+'_01'
-
+base_name = '20020a4c'
 
 # Model parameters
-model_dict = {'name': model_name,
+model_dict = {'name': base_name,
               'im_size': (299, 299, 1),
               'n_frames': 30,
               'cfr_boundaries': p_list,
@@ -29,7 +27,8 @@ model_dict = {'name': model_name,
               'filters': 32,
               'pool_nodes': 256,
               'fc_nodes': 256,
-              'fullnet': True}
+              'fullnet': True,
+              'im_resize_crop': True}
 
 train_dict = {'learning_rate': 0.0001,
               'loss_weights_class_ouput': 1.0,
@@ -39,21 +38,40 @@ train_dict = {'learning_rate': 0.0001,
               'test_batch_size': 20,
               'validation_batches': 50,
               'validation_freq': 1,
-              'epochs': 10,
+              'epochs': 100,
               'verbose': 1,
               'buffer_n_batches_train': 20,
               'buffer_n_batches_eval': 5}
 
-trainer = VideoTrainer(log_dir=log_dir,
+# We can run different models by changing some parameters
+im_resize_crop = False
+
+if im_resize_crop:
+    model_name = base_name+'_crop'
+    log_dir_model = os.path.join(log_dir, model_name)
+else:
+    model_name = base_name + '_pad'
+    log_dir_model = os.path.join(log_dir, model_name)
+
+model_dict['im_resize_crop'] = im_resize_crop
+model_dict['name'] = model_name
+
+trainer = VideoTrainer(log_dir=log_dir_model,
                        model_dict=model_dict,
                        train_dict=train_dict)
 
 convmodel = trainer.compile_convmodel()
 convmodel.summary()
 
-# Run the training for 3 epochs as a test
+# Run the training
 hist = trainer.train(convmodel, train_files, eval_files)
 
-# Fit history
+# Save fit history, model and training parameters
 with open(os.path.join(log_dir, model_name+'_hist.pickle'), 'wb') as f:
     pickle.dump(hist.history, f, protocol = pickle.HIGHEST_PROTOCOL)
+
+with open(os.path.join(log_dir_model, model_name+'_model_dict.pickle'), 'wb') as f:
+    pickle.dump(model_dict, f, protocol = pickle.HIGHEST_PROTOCOL)
+
+with open(os.path.join(log_dir_model, model_name+'_train_dict.pickle'), 'wb') as f:
+    pickle.dump(train_dict, f, protocol = pickle.HIGHEST_PROTOCOL)

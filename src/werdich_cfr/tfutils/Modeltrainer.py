@@ -33,7 +33,8 @@ class VideoTrainer:
                                         n_frames=self.model_dict['n_frames'],
                                         cfr_boundaries=self.model_dict['cfr_boundaries'],
                                         output_height=self.model_dict['im_size'][0],
-                                        output_width=self.model_dict['im_size'][1])
+                                        output_width=self.model_dict['im_size'][1],
+                                        im_resize_crop = self.model_dict['im_resize_crop'])
 
         dataset = dset_provider.make_batch(batch_size=batch_size,
                                            shuffle=shuffle,
@@ -91,6 +92,7 @@ class VideoTrainer:
                                            histogram_freq=1,
                                            write_graph=True,
                                            update_freq=100,
+                                           profile_batch=0,
                                            embeddings_freq=0)
 
         callback_list = [checkpoint_callback, tensorboard_callback]
@@ -99,19 +101,18 @@ class VideoTrainer:
 
     def train(self, model, train_tfr_files, eval_tfr_files):
 
-        train_batch_size = self.train_dict['train_batch_size']
-        eval_batch_size = self.train_dict['eval_batch_size']
-
         n_train, train_set = self.build_dataset(train_tfr_files,
-                                                batch_size=train_batch_size,
+                                                batch_size=self.train_dict['train_batch_size'],
                                                 buffer_n_batches=self.train_dict['buffer_n_batches_train'],
                                                 repeat_count=None,
                                                 shuffle=True)
 
+        steps_per_epoch_train = int(np.floor(n_train/self.train_dict['train_batch_size']))
+
         n_eval, eval_set = self.build_dataset(eval_tfr_files,
-                                              batch_size=eval_batch_size,
+                                              batch_size=self.train_dict['eval_batch_size'],
                                               buffer_n_batches=self.train_dict['buffer_n_batches_train'],
-                                              repeat_count = 1,
+                                              repeat_count = None,
                                               shuffle = True)
 
         hist = model.fit(x=train_set,
@@ -119,12 +120,12 @@ class VideoTrainer:
                          verbose=self.train_dict['verbose'],
                          validation_data=eval_set,
                          initial_epoch=0,
-                         steps_per_epoch=int(np.floor(n_train/train_batch_size)),
+                         steps_per_epoch=steps_per_epoch_train,
                          validation_steps=self.train_dict['validation_batches'],
                          validation_freq=self.train_dict['validation_freq'],
                          callbacks=self.create_callbacks())
 
         # After fit, save the model and weights
-        model.save(os.path.join(self.log_dir, self.model_dict['model_name']+'.h5'))
+        model.save(os.path.join(self.log_dir, self.model_dict['name']+'.h5'))
 
         return hist

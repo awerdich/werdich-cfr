@@ -101,7 +101,8 @@ class DatasetProvider:
                  cfr_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
-                 record_output=False):
+                 record_output=False,
+                 im_resize_crop=True):
 
         self.tfr_file_list = tfr_file_list
         self.repeat_count = repeat_count
@@ -110,6 +111,7 @@ class DatasetProvider:
         self.output_height = output_height
         self.output_width = output_width
         self.record_output = record_output
+        self.im_resize_crop = im_resize_crop
 
     @tf.function
     def _cfr_label(self, cfr_value):
@@ -127,19 +129,17 @@ class DatasetProvider:
 
     def _process_image(self, image):
 
-        # Original video shape in TFR is [sample, height, width, frames]
-        # First, we resize the images. Channels should stay unaffected
+        # Original video shape in TFR is [batch, height, width, frames]
 
-        #image = tf.image.resize_with_pad(image,
-        #                                 target_height = self.output_height,
-        #                                 target_width = self.output_width,
-        #                                 antialias = True)
-
-        # We can crop and then resize the images, but that would potentially cut off some information
-        # Also, this seems to cause problems with distribution strategy
-        image = tf.image.resize_with_crop_or_pad(image, target_height = 500, target_width = 500)
-        # Then, resize the whole thing
-        image = tf.image.resize(image, size = (self.output_height, self.output_width))
+        # We want to train with two different processing steps
+        if self.im_resize_crop:
+            image = tf.image.resize_with_crop_or_pad(image, target_height=500, target_width=500)
+            image = tf.image.resize(image, size=(self.output_height, self.output_width))
+        else:
+            image = tf.image.resize_with_pad(image,
+                                             target_height = self.output_height,
+                                             target_width = self.output_width,
+                                             antialias = True)
 
         # Now we need to reshape the image batch as [frames, height, width, channels]
         # video = layers.Input(shape=(30, 299, 299, 3), name='video input vector')
