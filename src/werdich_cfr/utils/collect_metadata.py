@@ -9,10 +9,12 @@ pd.set_option('display.width', 500)
 
 #%% files and paths
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-file_df_file = 'echo_BWH_npy_feather_files_200202.parquet'
+meta_date = '200207'
+meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
+file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
 
 #%% Load the file names
-file_df = pd.read_parquet(os.path.join(cfr_data_root, file_df_file))
+file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
 
 #%% Filter the feather files that are needed
 feather_dsc_list_original = list(file_df.dsc.unique())
@@ -77,7 +79,7 @@ def collect_meta_study(df, study):
 #%% Run the function.
 df_meta_list = [] # Collect filenames with meta data
 study_list = sorted(list(file_df2.study.unique()))
-meta_filename = 'echo_BWH_meta_200202.parquet'
+meta_filename = 'echo_BWH_meta_'+meta_date+'.parquet'
 start_time = time.time()
 for s, study in enumerate(study_list):
     df_meta_study = collect_meta_study(file_df2, study = study)
