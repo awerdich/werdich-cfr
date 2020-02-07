@@ -11,7 +11,11 @@ pd.set_option('display.max_columns', 50)
 pd.set_option('display.width', 500)
 
 #%% Files, directories and parameters
+
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+meta_date = '200207'
+meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
+
 cfr_echo_dir = os.path.normpath('/mnt/obi0/phi/echo/npyFiles/BWH')
 cfr_feather_dir = os.path.normpath('/mnt/obi0/phi/echo/featherFiles/BWH')
 key='rahuldeoechobwh*'
@@ -71,17 +75,17 @@ def add_base_name_mrn_datetime(df):
 
 #%% Run the search
 
-npy_file_list_name = 'echo_npyFiles_BWH_200131.parquet'
+npy_file_list_name = 'echo_npyFiles_BWH_'+meta_date+'.parquet'
 df_npy_file = collect_files(cfr_echo_dir, file_pattern = '*.npy.lz4')
 df_npy_file_2 = add_base_name_mrn_datetime(df_npy_file)
-df_npy_file_2.to_parquet(os.path.join(cfr_data_root, npy_file_list_name))
+df_npy_file_2.to_parquet(os.path.join(meta_dir, npy_file_list_name))
 
-feather_file_list_name = 'echo_featherFiles_BWH_200131.parquet'
+feather_file_list_name = 'echo_featherFiles_BWH_'+meta_date+'.parquet'
 df_feather_file = collect_files(cfr_feather_dir, file_pattern = '*.feather')
 df_feather_file_2 = add_base_name_mrn_datetime(df_feather_file)
 df_feather_file_3 = df_feather_file_2.assign(dsc = df_feather_file_2.filename.apply(
     lambda s: os.path.splitext(s)[0].replace(decode_file(s)[0], '')[1:]))
-df_feather_file_3.to_parquet(os.path.join(cfr_data_root, feather_file_list_name))
+df_feather_file_3.to_parquet(os.path.join(meta_dir, feather_file_list_name))
 
 df_feather_file_3 = df_feather_file_3.rename(columns = {'filename': 'meta_filename',
                                                         'dir': 'meta_dir'})
@@ -89,5 +93,5 @@ df_files = df_npy_file_2.merge(right = df_feather_file_3, how = 'left', on = ['s
 
 # Join npy_file_list and feather_file_list
 # Rename some of the feather data columns
-npy_meta_name = 'echo_BWH_npy_feather_files_200131.parquet'
-df_files.to_parquet(os.path.join(cfr_data_root, npy_meta_name))
+npy_meta_name = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
+df_files.to_parquet(os.path.join(meta_dir, npy_meta_name))

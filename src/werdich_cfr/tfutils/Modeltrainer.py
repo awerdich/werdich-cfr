@@ -33,8 +33,7 @@ class VideoTrainer:
                                         n_frames=self.model_dict['n_frames'],
                                         cfr_boundaries=self.model_dict['cfr_boundaries'],
                                         output_height=self.model_dict['im_size'][0],
-                                        output_width=self.model_dict['im_size'][1],
-                                        im_resize_crop = self.model_dict['im_resize_crop'])
+                                        output_width=self.model_dict['im_size'][1])
 
         dataset = dset_provider.make_batch(batch_size=batch_size,
                                            shuffle=shuffle,
