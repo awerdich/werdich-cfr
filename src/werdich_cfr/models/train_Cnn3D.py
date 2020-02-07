@@ -44,7 +44,7 @@ train_dict = {'learning_rate': 0.0001,
               'buffer_n_batches_eval': 5}
 
 # We can run different models by changing some parameters
-im_resize_crop = False
+im_resize_crop = True
 
 if im_resize_crop:
     model_name = base_name+'_crop'
