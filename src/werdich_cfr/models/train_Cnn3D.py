@@ -7,7 +7,7 @@ from werdich_cfr.tfutils.Modeltrainer import VideoTrainer
 
 #%% Some support functions
 
-def save_model_dict(model_dict, file):
+def write_model_dict(model_dict, file):
     with open(file, 'wb') as f:
         pickle.dump(model_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
     print('Saved {}.'.format(file))
@@ -23,9 +23,10 @@ eval_files = glob.glob(os.path.join(tfr_dir, 'CFR_200202_view_a4c_eval_*.tfrecor
 
 # Model name
 base_name = '20020a4c'
+model_name = base_name + '_pad'
 
 # Model parameters
-model_dict = {'name': base_name,
+model_dict = {'name': model_name,
               'im_size': (299, 299, 1),
               'n_frames': 30,
               'cfr_boundaries': p_list,
@@ -50,18 +51,14 @@ train_dict = {'learning_rate': 0.0001,
               'train_file_list': train_files,
               'eval_file_list': eval_files}
 
-# We can run different models by changing some parameters
-im_resize_crop = True
-model_name = base_name + '_pad'
-
 # Model directory
 log_dir_model = os.path.join(log_dir, model_name)
 
 # Save model parameters before training
 model_dict_file = os.path.join(log_dir_model, model_name+'_model_dict.pkl')
 train_dict_file = os.path.join(log_dir_model, model_name+'_train_dict.pkl')
-save_model_dict(model_dict, model_dict_file)
-save_model_dict(train_dict, train_dict_file)
+write_model_dict(model_dict, model_dict_file)
+write_model_dict(train_dict, train_dict_file)
 
 # Run training
 trainer = VideoTrainer(log_dir=log_dir_model,
@@ -75,3 +72,4 @@ convmodel.summary()
 #hist = trainer.train(convmodel, train_files, eval_files)
 #hist_file = os.path.join(log_dir_model, model_name+'_hist_dict.pkl')
 #save_model_dict(hist.history, hist_file)
+

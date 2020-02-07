@@ -97,6 +97,17 @@ class VideoTrainer:
         callback_list = [checkpoint_callback, tensorboard_callback]
 
         return callback_list
+    def predict(self, model, test_tfr_files):
+
+        n_test, test_set = self.build_dataset(test_tfr_files,
+                                              batch_size = 16,
+                                              repeat_count = 1,
+                                              shuffle = False)
+
+        predictions = model.predict(test_set)
+
+        return predictions
+
 
     def train(self, model, train_tfr_files, eval_tfr_files):
 
