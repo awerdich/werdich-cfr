@@ -1,4 +1,5 @@
-""" Create a metadata lookup table for all npy files """
+""" Create a metadata lookup table for ALL existing npy files
+We can have a separate script for the PET echo data set. """
 import os
 import pandas as pd
 import time
@@ -9,7 +10,7 @@ pd.set_option('display.width', 500)
 
 #%% files and paths
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200207'
+meta_date = '200208'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
 
@@ -20,6 +21,7 @@ file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
 feather_dsc_list_original = list(file_df.dsc.unique())
 feather_dsc_list = ['video_metadata_withScale', 'viewPredictionsVideo_withRV', 'study_metadata']
 file_df2 = file_df[file_df.dsc.isin(feather_dsc_list)]
+print('Collecting metadata from df: {}'.format(file_df_file))
 print('Number of unique npy files: {}'.format(len(file_df2.filename.unique())))
 print('Number of studies: {}'.format(len(file_df2.study.unique())))
 
