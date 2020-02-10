@@ -38,12 +38,11 @@ estimator = VideoTrainer(log_dir = log_dir,
 # Re-create the model from checkpoint
 model = load_model(checkpoint_file_list[0])
 
-#%% Create the model from checkpoint
-for c, checkpoint_file in enumerate(checkpoint_file_list_predict):
-    # Load the weights
-    model.load_weights(checkpoint_file)
+for c, cfile in enumerate(checkpoint_file_list_predict):
+    print('Running predictinos from checkpoint {} of {}: {}'.format(c+1, len(checkpoint_file_list_predict), 
+                                                                    os.path.basename(cfile)))
+    model.load_weights(cfile)
     class_output, score_output = estimator.predict(model, test_tfr_files, steps=None)
-    # Add predictions to original df
-	test_df_predict = test_df.assign(cfr_predicted = score_output)
-	predict_file = os.path.basename(checkpoint_file).split('.')[0]+'_predicted.parquet'
-	test_df_predict.to_parquet(os.path.join(log_dir, predict_file))
+    test_df_predict = test_df.assign(cfr_predicted = score_output)
+    predict_file = os.path.basename(cfile).split('.')[0]+'_predicted.parquet'
+    test_df_predict.to_parquet(os.path.join(log_dir, predict_file))
