@@ -39,12 +39,13 @@ class VideoTrainer:
                                            shuffle=shuffle,
                                            buffer_n_batches=buffer_n_batches)
 
-        # We need steps_per_epoch: number of samples in tfr_files. We can use the .parquet files
+        # We need steps_per_epoch: number of batches required for one epoch
         parquet_files = [file.split('.')[0]+'.parquet' for file in tfr_files]
         df = pd.concat([pd.read_parquet(file) for file in parquet_files], axis=0, ignore_index=True)
         n_records = len(df.filename.unique())
+        n_steps = int(np.floor(n_records/batch_size))+1
 
-        return n_records, dataset
+        return n_steps, dataset
 
     def compile_convmodel(self):
         """ Set up the model with loss functions, metrics, etc
@@ -97,41 +98,43 @@ class VideoTrainer:
         callback_list = [checkpoint_callback, tensorboard_callback]
 
         return callback_list
-    def predict(self, model, test_tfr_files):
+    def predict(self, model, test_tfr_files, steps=None):
 
-        n_test, test_set = self.build_dataset(test_tfr_files,
-                                              batch_size=10,
-                                              repeat_count=1,
-                                              shuffle=False,
-                                              buffer_n_batches=None)
+        n_steps_test, test_set = self.build_dataset(test_tfr_files,
+                                                    batch_size=10,
+                                                    repeat_count=1,
+                                                    shuffle=False,
+                                                    buffer_n_batches=None)
 
-        predictions = model.predict(test_set, verbose=1)
+        if steps is None:
+            predict_steps = n_steps_test
+        else:
+            predict_steps = steps
+
+        predictions = model.predict(test_set, verbose=1, steps=predict_steps)
 
         return predictions
 
-
     def train(self, model, train_tfr_files, eval_tfr_files):
 
-        n_train, train_set = self.build_dataset(train_tfr_files,
-                                                batch_size=self.train_dict['train_batch_size'],
-                                                buffer_n_batches=self.train_dict['buffer_n_batches_train'],
-                                                repeat_count=None,
-                                                shuffle=True)
+        n_steps_train, train_set = self.build_dataset(train_tfr_files,
+                                                      batch_size=self.train_dict['train_batch_size'],
+                                                      buffer_n_batches=self.train_dict['buffer_n_batches_train'],
+                                                      repeat_count=None,
+                                                      shuffle=True)
 
-        steps_per_epoch_train = int(np.floor(n_train/self.train_dict['train_batch_size']))
-
-        n_eval, eval_set = self.build_dataset(eval_tfr_files,
-                                              batch_size=self.train_dict['eval_batch_size'],
-                                              buffer_n_batches=self.train_dict['buffer_n_batches_train'],
-                                              repeat_count = None,
-                                              shuffle = True)
+        n_steps_eval, eval_set = self.build_dataset(eval_tfr_files,
+                                                    batch_size=self.train_dict['eval_batch_size'],
+                                                    buffer_n_batches=self.train_dict['buffer_n_batches_train'],
+                                                    repeat_count = None,
+                                                    shuffle = True)
 
         hist = model.fit(x=train_set,
                          epochs=self.train_dict['epochs'],
                          verbose=self.train_dict['verbose'],
                          validation_data=eval_set,
                          initial_epoch=0,
-                         steps_per_epoch=steps_per_epoch_train,
+                         steps_per_epoch=n_steps_train,
                          validation_steps=self.train_dict['validation_batches'],
                          validation_freq=self.train_dict['validation_freq'],
                          callbacks=self.create_callbacks())
