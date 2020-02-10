@@ -28,7 +28,7 @@ checkpoint_file_list_predict = [checkpoint_file_list[14], checkpoint_file_list[-
 
 test_tfr_files = sorted(glob.glob(os.path.join(test_data_dir, 'CFR_200202_view_a4c_test_*.tfrecords')))
 test_parquet_files = [file.replace('.tfrecords', '.parquet') for file in test_tfr_files]
-test_df = pd.concat([pd.read_parquet(file) for file in test_parquet_files], axis = 0).iloc[:50]
+test_df = pd.concat([pd.read_parquet(file) for file in test_parquet_files], axis = 0)
 
 #Instantiate the prediction
 estimator = VideoTrainer(log_dir = log_dir,
@@ -42,16 +42,8 @@ model = load_model(checkpoint_file_list[0])
 for c, checkpoint_file in enumerate(checkpoint_file_list_predict):
     # Load the weights
     model.load_weights(checkpoint_file)
-    class_output, score_output = estimator.predict(model, test_tfr_files, steps=5)
+    class_output, score_output = estimator.predict(model, test_tfr_files, steps=None)
     # Add predictions to original df
 	test_df_predict = test_df.assign(cfr_predicted = score_output)
 	predict_file = os.path.basename(checkpoint_file).split('.')[0]+'_predicted.parquet'
-	pd.to_parquet(os.path.join(log_dir, predict_file))
-
-
-
-
-
-
-
-
+	test_df_predict.to_parquet(os.path.join(log_dir, predict_file))
