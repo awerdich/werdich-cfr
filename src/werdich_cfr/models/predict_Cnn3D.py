@@ -1,6 +1,7 @@
 import os
 import glob
 import pickle
+import pandas as pd
 
 from tensorflow.keras.models import load_model
 
@@ -25,9 +26,14 @@ model_dict = read_model_dict(model_dict_file)
 checkpoint_file_list = sorted(glob.glob(os.path.join(log_dir, model_dict['name']+'*_chkpt_*')))
 checkpoint_file = checkpoint_file_list[14]
 
+#%% Create the model from checkpoint
+
 # Re-create the model from checkpoint
 model = load_model(checkpoint_file)
-model = model.load_weights(checkpoint_file)
+model.load_weights(checkpoint_file)
+model.summary()
+
+#%% Use VideoTrainer class to predict
 
 estimator = VideoTrainer(log_dir = log_dir,
                          model_dict = model_dict,
@@ -35,6 +41,9 @@ estimator = VideoTrainer(log_dir = log_dir,
 
 test_tfr_files = sorted(glob.glob(os.path.join(test_data_dir, 'CFR_200202_view_a4c_test_*.tfrecords')))
 test_parquet_files = [file.replace('.tfrecords', '.parquet') for file in test_tfr_files]
+test_df = pd.concat([pd.read_parquet(file) for file in test_parquet_files], axis = 0)
+
+predictions = estimator.predict(model, test_tfr_files)
 
 
 

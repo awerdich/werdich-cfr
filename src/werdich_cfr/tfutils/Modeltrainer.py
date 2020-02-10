@@ -100,11 +100,12 @@ class VideoTrainer:
     def predict(self, model, test_tfr_files):
 
         n_test, test_set = self.build_dataset(test_tfr_files,
-                                              batch_size = 16,
-                                              repeat_count = 1,
-                                              shuffle = False)
+                                              batch_size=10,
+                                              repeat_count=1,
+                                              shuffle=False,
+                                              buffer_n_batches=None)
 
-        predictions = model.predict(test_set)
+        predictions = model.predict(test_set, verbose=1)
 
         return predictions
 
