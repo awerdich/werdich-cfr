@@ -1,5 +1,7 @@
-""" Create a metadata lookup table for ALL existing npy files
-We can have a separate script for the PET echo data set. """
+"""
+Create a metadata lookup table for ALL existing npy files
+Or just the MRNs for the project """
+
 import os
 import pandas as pd
 import time
@@ -12,7 +14,7 @@ pd.set_option('display.width', 500)
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200208'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
+file_df_file = 'echo_BWH_npy_feather_files_cfr_'+meta_date+'.parquet'
 
 #%% Load the file names
 file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
@@ -80,8 +82,12 @@ def collect_meta_study(df, study):
 
 #%% Run the function.
 df_meta_list = [] # Collect filenames with meta data
+df_missing_meta_list = [] # Collect studies with missing meta data
+
 study_list = sorted(list(file_df2.study.unique()))
-meta_filename = 'echo_BWH_meta_'+meta_date+'.parquet'
+meta_filename = 'echo_BWH_meta_cfr_'+meta_date+'.parquet'
+meta_missing_filename = meta_filename.split('.')[0]+'_missing.parquet'
+
 start_time = time.time()
 for s, study in enumerate(study_list):
     df_meta_study = collect_meta_study(file_df2, study = study)
@@ -89,6 +95,7 @@ for s, study in enumerate(study_list):
         df_meta_list.append(df_meta_study)
     else:
         print('Not enough meta data for study {}. Skipping.'.format(study))
+        df_missing_meta_list.append(file_df2[file_df2.study == study])
     if (s+1) % 100 == 0:
         print('Study {} of {}, time {:.1f} seconds.'.format(s + 1,
                                                 len(study_list),
@@ -96,8 +103,13 @@ for s, study in enumerate(study_list):
 
 # Concat all data frames
 df_meta = pd.concat(df_meta_list, ignore_index = True).reset_index(drop = True)
+df_missing_meta = pd.concat(df_missing_meta_list, ignore_index=True).reset_index(drop=True)
 
 # Make sure that we have consistent types in numeric columns
 num_cols = ['frame_time', 'number_of_frames', 'heart_rate', 'deltaX', 'deltaY']
 df_meta.loc[:, num_cols] = df_meta[num_cols].apply(pd.to_numeric, errors = 'coerce')
-df_meta.to_parquet(os.path.join(cfr_data_root, meta_filename))
+df_meta.to_parquet(os.path.join(meta_dir, meta_filename))
+
+# Here are the .npy files that are missing meta data
+# Missing either video_metadata_withScale OR viewPredictionsVideo_withRV
+df_missing_meta.to_parquet(os.path.join(meta_dir, meta_missing_filename))
