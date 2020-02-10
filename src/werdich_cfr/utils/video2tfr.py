@@ -14,6 +14,8 @@ from werdich_cfr.tfutils.TFRprovider import Dset
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200208'
+# Additional information for filename
+tfr_info = 'unscaled'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
@@ -21,7 +23,7 @@ meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 max_samples_per_file = 2000
 
 # This should give us ~70% useful files
-min_rate = 20 # Minimum acceptable frame rate [fps]
+min_rate = 21 # Minimum acceptable frame rate [fps]
 min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = min_frames/min_rate
 max_frame_time = 1/min_rate*1e3 # Maximum frame time [ms]
@@ -52,13 +54,13 @@ def data2imarray(im_data):
     im_array = np.moveaxis(im_array, 0, -1)
     return im_array
 
-def subsample_time_index_list(frame_time, default_rate, min_frames):
+def subsample_time_index_list(frame_time, default_rate, n_frames):
     """
-    rate: data frame rate,
-    default_rate: desired frame rate,
-    n_frames: number frames in the default rate (30)
+    frame_time: time interval between frames [s]
+    default_rate: matching frame rate [fps],
+    n_frames: number of frames in the output
     """
-    default_times = np.arange(0, min_frames, 1) / default_rate
+    default_times = np.arange(0, n_frames, 1) / default_rate
     times = np.arange(0, default_times[-1] + frame_time, frame_time)
     time_index_list = [np.argmin(np.abs(times - t)) for t in default_times]
 
@@ -79,7 +81,7 @@ def subsample_video(image_array, frame_time, min_rate, min_frames):
         # Get the frame index list
         time_index_list = subsample_time_index_list(frame_time=frame_time,
                                                     default_rate=min_rate,
-                                                    min_frames=min_frames)
+                                                    n_frames=min_frames)
         # Select the frames from the video
         image_array = image_array[:, :, time_index_list]
     else:
@@ -110,13 +112,14 @@ for mode in meta_df['mode'].unique():
 
     # Each part will have its own TFR filename
     for part, file_list in enumerate(file_list_parts):
-        print()
-        print('Processing TFR part {} of {}'.format(part+1, len(file_list_parts)))
 
         # TFR filename
-        tfr_basename = 'CFR_'+meta_date+'_'+view+'_'+mode+'_'+str(part).zfill(mag)
+        tfr_basename = 'cfr_'+tfr_info+'_'+view+'_'+mode+'_'+meta_date+'_'+str(part).zfill(mag)
         tfr_filename = tfr_basename+'.tfrecords'
         parquet_filename = tfr_basename+'.parquet'
+
+        print()
+        print('Processing {} part {} of {}'.format(tfr_filename, part + 1, len(file_list_parts)))
 
         im_array_list = [] # list of image arrays [row, col, frame]
         im_array_ser_list = [] # list of pd.Series object for the files in im_array_list
