@@ -15,7 +15,7 @@ from werdich_cfr.tfutils.TFRprovider import Dset
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200208'
 # Additional information for filename
-tfr_info = 'scaled'
+tfr_info = 'resized'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
