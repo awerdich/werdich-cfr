@@ -15,11 +15,19 @@ from werdich_cfr.tfutils.TFRprovider import Dset
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200208'
 # Additional information for filename
-tfr_info = 'unscaled'
+tfr_info = 'scaled'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
-meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
+meta_df_original = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
+
+# Get rid of files with invalid scale factors
+
+print('Original number of files {}'.format(len(meta_df_original.filename.unique())))
+meta_df = meta_df_original[(0 < meta_df_original.deltaX) & (meta_df_original.deltaX < 1) &
+                           (0 < meta_df_original.deltaY) & (meta_df_original.deltaY < 1)]
+print('After removing invalid scale factors {}'.format(len(meta_df.filename.unique())))
+
 max_samples_per_file = 2000
 
 # This should give us ~70% useful files
@@ -35,21 +43,27 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-def im_scale(im):
-    """ convert single images to uint8 """
+def im_scale(im, dx, dy):
+    """ convert single images to uint8 and resize by scale factors """
     # We can do other things here: e.g. background subtraction or contrast enhancement
     im_scaled = np.uint8((im - np.amin(im))/(np.amax(im) - np.amin(im))*256)
-    #im_scaled_eq = cv2.equalizeHist(im_scaled)
-    return im_scaled
+    #im_scaled_eq = cv2.equalizeHist(im_scaled) # histogram equalization (not needed)
+    if (dx is not None) & (dy is not None):
+        width = int(np.round(im_scaled.shape[1]*10*dx))
+        height = int(np.round(im_scaled.shape[0]*10*dy))
+        im_resized = cv2.resize(im_scaled, (width, height), interpolation=cv2.INTER_LINEAR)
+    else:
+        im_resized = im_scaled
+    return im_resized
 
-def data2imarray(im_data):
+def data2imarray(im_data, dx=None, dy=None):
     """
     apply imscale function to np.array
     arg: im_array (frame, height, width)
     returns: im_array (height, width, frame)
     """
     im_data = np.squeeze(im_data)
-    im_list = [im_scale(im_data[im]) for im in range(im_data.shape[0])]
+    im_list = [im_scale(im_data[im], dx, dy) for im in range(im_data.shape[0])]
     im_array = np.array(im_list, dtype=np.uint16)
     im_array = np.moveaxis(im_array, 0, -1)
     return im_array
@@ -92,6 +106,7 @@ def subsample_video(image_array, frame_time, min_rate, min_frames):
 #%% Select one view and process files
 
 view = 'a4c'
+
 #for view in meta_df.max_view.unique():
 
 for mode in meta_df['mode'].unique():
@@ -144,7 +159,7 @@ for mode in meta_df['mode'].unique():
                 print('Could not open this file: {}\n {}'.format(file, err))
                 im_failed_ser_list.append(ser_df)
             else:
-                im_array_original = data2imarray(data)
+                im_array_original = data2imarray(data, dx=ser.deltaX, dy=ser.deltaY)
                 frame_time = ser.frame_time * 1e-3
                 convert_video, im_array = subsample_video(image_array=im_array_original,
                                                           frame_time=frame_time,
@@ -155,6 +170,7 @@ for mode in meta_df['mode'].unique():
                     im_array_list.append(im_array)
                     cfr_list.append(ser.cfr)
                     record_list.append(ser.name)
+                    ser_df2 = ser_df.assign(im_array_shape=[im_array.shape])
                     im_array_ser_list.append(ser_df)
                 else:
                     print('{} w/ rate: {} fps and duration: {:.2f} s. Skipping'.\
