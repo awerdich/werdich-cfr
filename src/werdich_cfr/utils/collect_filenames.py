@@ -13,7 +13,7 @@ pd.set_option('display.width', 500)
 #%% Files, directories and parameters
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200207'
+meta_date = '200211'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
 cfr_echo_dir = os.path.normpath('/mnt/obi0/phi/echo/npyFiles/BWH')
@@ -75,6 +75,7 @@ def add_base_name_mrn_datetime(df):
 
 #%% Run the search
 
+print('metadata dir: {}'.format(meta_dir))
 npy_file_list_name = 'echo_npyFiles_BWH_'+meta_date+'.parquet'
 df_npy_file = collect_files(cfr_echo_dir, file_pattern = '*.npy.lz4')
 df_npy_file_2 = add_base_name_mrn_datetime(df_npy_file)

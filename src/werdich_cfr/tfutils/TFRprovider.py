@@ -96,19 +96,21 @@ class DatasetProvider:
 
     def __init__(self,
                  tfr_file_list,
+                 n_frames,
                  repeat_count=None,
-                 n_frames=30,
                  cfr_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
+                 im_scale_factor=None,
                  record_output=False):
 
         self.tfr_file_list = tfr_file_list
-        self.repeat_count = repeat_count
         self.n_frames = n_frames
+        self.repeat_count = repeat_count
         self.cfr_boundaries = cfr_boundaries
         self.output_height = output_height
         self.output_width = output_width
+        self.im_scale_factor = im_scale_factor
         self.record_output = record_output
 
     @tf.function
@@ -125,29 +127,31 @@ class DatasetProvider:
                 label = p
         return tf.one_hot(label, depth = len(percentile_list)+1)
 
-    def _process_image(self, image):
+    def _process_image(self, image, shape):
 
-        # Original video shape in TFR is [batch, height, width, frames]
-        # We want to train with two different processing steps
-        image = tf.image.resize_with_pad(image,
-                                         target_height = self.output_height,
-                                         target_width = self.output_width,
-                                         antialias = True)
+        # original shape is [height, width, frames] -> [frames, height, width, 1]
+        # If there is no scale-factor, the images will be resized to fit
+        image = tf.reshape(image, shape=shape)
+        image = tf.transpose(image, perm=[2, 0, 1])
+        image = tf.expand_dims(image, axis=-1)
 
-        # Now we need to reshape the image batch as [frames, height, width, channels]
-        # video = layers.Input(shape=(30, 299, 299, 3), name='video input vector')
-        # Set the shape and transpose so that time steps are first
-        image = tf.reshape(image, shape=(self.output_height, self.output_width, self.n_frames))
-        image = tf.transpose(image, perm = [2, 0, 1])
+        if self.im_scale_factor is None:
+            image = tf.image.resize_with_pad(image,
+                                             target_height=self.output_height,
+                                             target_width=self.output_width)
+        else:
+            # Re-size the image with a single scale factor, then pad to output_size
+            im_size = tf.cast(tf.slice(shape, [0], [2]), dtype=tf.float32)
+            new_im_size = tf.cast(tf.math.ceil(tf.math.scalar_mul(self.im_scale_factor, im_size)), tf.int32)
+            image = tf.image.resize(image, size=new_im_size, antialias=True)
+            # Crop or pad to the desired output size
+            image = tf.image.resize_with_crop_or_pad(image,
+                                                     target_height=self.output_height,
+                                                     target_width=self.output_width)
 
-        # Add a fourth dimension for RGB values
-        image = tf.expand_dims(image, axis = -1)
-
-        # Convert to float
+        # Scale image to have mean 0 and variance 1
         image = tf.cast(image, tf.float64)
-
-        # Linearly scale images to have zero mean and unit std
-        image = tf.image.adjust_contrast(image, contrast_factor=2)
+        image = tf.image.adjust_contrast(image, contrast_factor=5)
         output_image = tf.image.per_image_standardization(image)
 
         return output_image
@@ -177,13 +181,13 @@ class DatasetProvider:
         # categorical and regression outputs (tuple of dicts)
         if self.record_output:
             # Add record output for testing only (additional output gives an error during training)
-            outputs = ({'video': self._process_image(image)},
+            outputs = ({'video': self._process_image(image, shape)},
                        {'class_output': self._cfr_label(cfr),
                         'score_output': cfr},
                        {'record': record})
         else:
             # For training, use only model input/outputs
-            outputs = ({'video': self._process_image(image)},
+            outputs = ({'video': self._process_image(image, shape)},
                        {'class_output': self._cfr_label(cfr),
                         'score_output': cfr})
         return outputs

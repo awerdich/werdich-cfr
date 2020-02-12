@@ -12,6 +12,7 @@ class Convmodel:
 
         # NETWORK PARAMETERS AS DICTIONARY
         self.im_size = model_dict['im_size']
+        self.n_frames = model_dict['n_frames']
         self.cl_outputs = model_dict['cl_outputs']
         self.filters = model_dict['filters']
         self.fc_nodes = model_dict['fc_nodes']
@@ -20,7 +21,7 @@ class Convmodel:
 
     def video_encoder(self):
 
-        video = layers.Input(shape = (30, *self.im_size), name = 'video')
+        video = layers.Input(shape = (self.n_frames, *self.im_size), name = 'video')
 
         # Block 1
         x = Conv3D(self.filters, (3, 3, 3), activation='relu')(video)

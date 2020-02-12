@@ -107,8 +107,6 @@ def subsample_video(image_array, frame_time, min_rate, min_frames):
 
 view = 'a4c'
 
-#for view in meta_df.max_view.unique():
-
 for mode in meta_df['mode'].unique():
 
     # Filter view, mode and rates. Shuffle.
@@ -170,8 +168,8 @@ for mode in meta_df['mode'].unique():
                     im_array_list.append(im_array)
                     cfr_list.append(ser.cfr)
                     record_list.append(ser.name)
-                    ser_df2 = ser_df.assign(im_array_shape=[im_array.shape])
-                    im_array_ser_list.append(ser_df)
+                    ser_df2 = ser_df.assign(im_array_shape=[list(im_array.shape)])
+                    im_array_ser_list.append(ser_df2)
                 else:
                     print('{} w/ rate: {} fps and duration: {:.2f} s. Skipping'.\
                           format(filename,
