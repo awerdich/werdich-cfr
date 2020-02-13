@@ -97,7 +97,6 @@ class DatasetProvider:
     def __init__(self,
                  tfr_file_list,
                  n_frames,
-                 repeat_count=None,
                  cfr_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
@@ -106,7 +105,6 @@ class DatasetProvider:
 
         self.tfr_file_list = tfr_file_list
         self.n_frames = n_frames
-        self.repeat_count = repeat_count
         self.cfr_boundaries = cfr_boundaries
         self.output_height = output_height
         self.output_width = output_width
@@ -192,18 +190,18 @@ class DatasetProvider:
                         'score_output': cfr})
         return outputs
 
-    def make_batch(self, batch_size, shuffle, buffer_n_batches=100):
+    def make_batch(self, batch_size, shuffle, buffer_n_batches=100, repeat_count=1, drop_remainder=False):
 
         # Shuffle data
         if shuffle:
 
-            n_parallel_calls = tf.data.experimental.AUTOTUNE
+            #n_parallel_calls = tf.data.experimental.AUTOTUNE
 
             files = tf.data.Dataset.list_files(self.tfr_file_list, shuffle = True)
 
             dataset = files.interleave(tf.data.TFRecordDataset,
                                        cycle_length = len(self.tfr_file_list),
-                                       num_parallel_calls = n_parallel_calls)
+                                       num_parallel_calls = None)
 
             dataset = dataset.shuffle(buffer_size = buffer_n_batches * batch_size,
                                       reshuffle_each_iteration = True)
@@ -213,12 +211,12 @@ class DatasetProvider:
             n_parallel_calls = 1
 
         # Parse records
-        dataset = dataset.map(map_func = self._parse, num_parallel_calls = n_parallel_calls)
+        dataset = dataset.map(map_func=self._parse, num_parallel_calls = None)
 
         # Batch it up
-        dataset = dataset.batch(batch_size)
+        dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
 
         # Prefetch
-        dataset = dataset.prefetch(buffer_size = tf.data.experimental.AUTOTUNE)
+        dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
-        return dataset.repeat(count = self.repeat_count)
+        return dataset.repeat(count=repeat_count)

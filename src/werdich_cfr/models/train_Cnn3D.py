@@ -13,28 +13,28 @@ def write_model_dict(model_dict, file):
     print('Saved {}.'.format(file))
 
 #%% Directories and data sets
-tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200202')
+tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200208')
 log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log')
 p_list = [1.259, 1.591, 2.066]
 
 # Training and evaluation files
-train_files = glob.glob(os.path.join(tfr_dir, 'CFR_200202_view_a4c_train_*.tfrecords'))
-eval_files = glob.glob(os.path.join(tfr_dir, 'CFR_200202_view_a4c_eval_*.tfrecords'))
+train_files = glob.glob(os.path.join(tfr_dir, 'cfr_resized_a4c_train_200208_*.tfrecords'))
+eval_files = glob.glob(os.path.join(tfr_dir, 'cfr_resized_a4c_eval_200208_*.tfrecords'))
 
 # Model name
-model_name = '200202a4call'
+model_name = '200208a4c'
 # Model directory
 log_dir_model = os.path.join(log_dir, model_name)
 
 # GPUs
-os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3'
+#os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
+#os.environ['CUDA_VISIBLE_DEVICES']='0,1'
 
 # Model parameters
 model_dict = {'name': model_name,
               'im_size': (299, 299, 1),
               'im_scale_factor': None,
-              'n_frames': 30,
+              'n_frames': 40,
               'cfr_boundaries': p_list,
               'cl_outputs': len(p_list)+1,
               'filters': 32,
@@ -45,13 +45,13 @@ model_dict = {'name': model_name,
 train_dict = {'learning_rate': 0.0001,
               'loss_weights_class_ouput': 1.0,
               'loss_weights_score_output': 9.0,
-              'train_batch_size': 20,
-              'eval_batch_size': 20,
-              'validation_batches': 20,
+              'train_batch_size': 10,
+              'eval_batch_size': 8,
+              'validation_batches': None,
               'validation_freq': 1,
               'epochs': 100,
               'verbose': 1,
-              'buffer_n_batches_train': 20,
+              'buffer_n_batches_train': 16,
               'buffer_n_batches_eval': None,
               'train_file_list': train_files,
               'eval_file_list': eval_files}

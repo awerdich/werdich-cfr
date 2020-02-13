@@ -23,7 +23,7 @@ eval_files = glob.glob(os.path.join(tfr_dir, 'cfr_resized_a4c_eval_200208_*.tfre
 
 # GPUs
 os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES']='0,1'
+os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3'
 
 # Model name
 model_name = '200208a4cresizedpad'
@@ -45,14 +45,13 @@ model_dict = {'name': model_name,
 train_dict = {'learning_rate': 0.0001,
               'loss_weights_class_ouput': 1.0,
               'loss_weights_score_output': 9.0,
-              'train_batch_size': 12,
-              'eval_batch_size': 12,
-              'validation_batches': 10,
+              'train_batch_size': 24,
+              'eval_batch_size': 8,
+              'validation_batches': None,
               'validation_freq': 1,
               'epochs': 100,
               'verbose': 1,
-              'buffer_n_batches_train': 12,
-              'buffer_n_batches_eval': None,
+              'buffer_n_batches_train': 16,
               'train_file_list': train_files,
               'eval_file_list': eval_files}
 

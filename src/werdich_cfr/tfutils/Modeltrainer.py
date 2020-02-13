@@ -25,11 +25,16 @@ class VideoTrainer:
         self.model_dict = model_dict # Model parameter
         self.train_dict = train_dict # Training parameter
 
-    def build_dataset(self, tfr_files, batch_size, buffer_n_batches, repeat_count = None, shuffle = False):
+    def build_dataset(self, tfr_files,
+                      batch_size,
+                      buffer_n_batches,
+                      repeat_count=None,
+                      shuffle=False,
+                      drop_remainder=False):
+
         """ Create TFR dataset object as input to the network
         """
         dset_provider = DatasetProvider(tfr_files,
-                                        repeat_count=repeat_count,
                                         n_frames=self.model_dict['n_frames'],
                                         cfr_boundaries=self.model_dict['cfr_boundaries'],
                                         output_height=self.model_dict['im_size'][0],
@@ -38,7 +43,9 @@ class VideoTrainer:
 
         dataset = dset_provider.make_batch(batch_size=batch_size,
                                            shuffle=shuffle,
-                                           buffer_n_batches=buffer_n_batches)
+                                           buffer_n_batches=buffer_n_batches,
+                                           repeat_count=repeat_count,
+                                           drop_remainder=drop_remainder)
 
         # We need steps_per_epoch: number of batches required for one epoch
         parquet_files = [file.split('.')[0]+'.parquet' for file in tfr_files]
@@ -122,13 +129,15 @@ class VideoTrainer:
                                                       batch_size=self.train_dict['train_batch_size'],
                                                       buffer_n_batches=self.train_dict['buffer_n_batches_train'],
                                                       repeat_count=None,
-                                                      shuffle=True)
+                                                      shuffle=True,
+                                                      drop_remainder=True)
 
         n_steps_eval, eval_set = self.build_dataset(eval_tfr_files,
                                                     batch_size=self.train_dict['eval_batch_size'],
                                                     buffer_n_batches=None,
-                                                    repeat_count=None,
-                                                    shuffle=False)
+                                                    repeat_count=1,
+                                                    shuffle=False,
+                                                    drop_remainder=True)
 
         hist = model.fit(x=train_set,
                          epochs=self.train_dict['epochs'],
