@@ -208,7 +208,7 @@ class DatasetProvider:
 
         else:
             dataset = tf.data.TFRecordDataset(self.tfr_file_list)
-            n_parallel_calls = 1
+            #n_parallel_calls = 1
 
         # Parse records
         dataset = dataset.map(map_func=self._parse, num_parallel_calls = None)

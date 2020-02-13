@@ -109,11 +109,11 @@ class VideoTrainer:
     def predict(self, model, test_tfr_files, steps=None):
 
         n_steps_test, test_set = self.build_dataset(test_tfr_files,
-                                                    batch_size=10,
+                                                    batch_size=20,
+                                                    buffer_n_batches=None,
                                                     repeat_count=1,
                                                     shuffle=False,
-                                                    buffer_n_batches=None)
-
+                                                    drop_remainder=False)
         if steps is None:
             predict_steps = n_steps_test
         else:
