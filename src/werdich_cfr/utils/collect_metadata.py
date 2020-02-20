@@ -14,7 +14,7 @@ pd.set_option('display.width', 500)
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200208'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-file_df_file = 'echo_BWH_npy_feather_files_cfr_'+meta_date+'.parquet'
+file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
 
 #%% Load the file names
 file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
