@@ -13,7 +13,7 @@ from werdich_cfr.tfutils.TFRprovider import Dset
 
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200208'
+meta_date = '200227'
 # Additional information for filename
 tfr_info = 'resized'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
@@ -49,8 +49,8 @@ def im_scale(im, dx, dy):
     im_scaled = np.uint8((im - np.amin(im))/(np.amax(im) - np.amin(im))*256)
     #im_scaled_eq = cv2.equalizeHist(im_scaled) # histogram equalization (not needed)
     if (dx is not None) & (dy is not None):
-        width = int(np.round(im_scaled.shape[1]*10*dx))
-        height = int(np.round(im_scaled.shape[0]*10*dy))
+        width = int(np.round(im_scaled.shape[1]*5*dx))
+        height = int(np.round(im_scaled.shape[0]*5*dy))
         im_resized = cv2.resize(im_scaled, (width, height), interpolation=cv2.INTER_LINEAR)
     else:
         im_resized = im_scaled
@@ -138,6 +138,8 @@ for mode in meta_df['mode'].unique():
         im_array_ser_list = [] # list of pd.Series object for the files in im_array_list
         im_failed_ser_list = [] # list of pd.Series objects for failed videos
         cfr_list = []
+        rest_mbf_list = []
+        stress_mbf_list = []
         record_list = []
 
         for f, filename in enumerate(file_list):
@@ -166,7 +168,9 @@ for mode in meta_df['mode'].unique():
                 if convert_video:
                     # SUCCESS: save this video in list
                     im_array_list.append(im_array)
-                    cfr_list.append(ser.cfr)
+                    cfr_list.append(ser.unaffected_cfr)
+                    rest_mbf_list.append(ser.rest_mbf_unaff)
+                    stress_mbf_list.append(ser.stress_mbf_unaff)
                     record_list.append(ser.name)
                     ser_df2 = ser_df.assign(im_array_shape=[list(im_array.shape)])
                     im_array_ser_list.append(ser_df2)
@@ -181,9 +185,16 @@ for mode in meta_df['mode'].unique():
         # Write TFR file
         TFR_saver = Dset(data_root=tfr_dir)
         print()
+
+
+        #def create_tfr(self, filename, image_data, cfr_data,
+        #               rest_mbf_data, stress_mbf_data, record_data):
+
         TFR_saver.create_tfr(filename=tfr_filename,
                              image_data=im_array_list,
                              cfr_data=cfr_list,
+                             rest_mbf_data=rest_mbf_list,
+                             stress_mbf_data=stress_mbf_list,
                              record_data=record_list)
 
         # When this is done, save the parquet file

@@ -22,7 +22,8 @@ class Dset:
     def __init__(self, data_root):
         self.data_root = data_root
 
-    def create_tfr(self, filename, image_data, cfr_data, record_data):
+    def create_tfr(self, filename, image_data, cfr_data,
+                   rest_mbf_data, stress_mbf_data, record_data):
         ''' Build a TFRecoreds data set from numpy arrays'''
 
         file = os.path.join(self.data_root, filename)
@@ -40,6 +41,8 @@ class Dset:
                 im_bytes = image_data[i].astype(np.uint16).tobytes()
                 im_shape_bytes = np.array(image_data[i].shape).astype(np.uint16).tobytes()
                 cfr = cfr_data[i]
+                rest_mbf = rest_mbf_data[i]
+                stress_mbf = stress_mbf_data[i]
                 idx = record_data[i]
 
                 # Build example
@@ -47,6 +50,8 @@ class Dset:
                     'image': self._wrap_bytes(im_bytes),
                     'shape': self._wrap_bytes(im_shape_bytes),
                     'cfr': self._wrap_float(cfr),
+                    'rest_mbf': self._wrap_float(rest_mbf),
+                    'stress_mbf': self._wrap_float(stress_mbf),
                     'record': self._wrap_int64(idx)}))
 
                 # Serialize example
@@ -159,6 +164,8 @@ class DatasetProvider:
         example = {'image': tf.io.FixedLenFeature([], tf.string),
                    'shape': tf.io.FixedLenFeature([], tf.string),
                    'cfr': tf.io.FixedLenFeature([], tf.float32),
+                   'rest_mbf': tf.io.FixedLenFeature([], tf.float32),
+                   'stress_mbf': tf.io.FixedLenFeature([], tf.float32),
                    'record': tf.io.FixedLenFeature([], tf.int64)}
 
         # Extract example from the data record
@@ -174,20 +181,25 @@ class DatasetProvider:
         # Now we need to process them.
 
         cfr = example['cfr']
+        rest_mbf = example['rest_mbf']
+        stress_mbf = example['stress_mbf']
         record = example['record']
 
         # categorical and regression outputs (tuple of dicts)
-        if self.record_output:
-            # Add record output for testing only (additional output gives an error during training)
-            outputs = ({'video': self._process_image(image, shape)},
-                       {'class_output': self._cfr_label(cfr),
-                        'score_output': cfr},
-                       {'record': record})
-        else:
+
+        if not self.record_output:
             # For training, use only model input/outputs
             outputs = ({'video': self._process_image(image, shape)},
                        {'class_output': self._cfr_label(cfr),
-                        'score_output': cfr})
+                        'score_output': cfr,
+                        'mbf': rest_mbf})
+        else:
+            outputs = ({'video': self._process_image(image, shape)},
+                       {'class_output': self._cfr_label(cfr),
+                        'score_output': cfr,
+                        'mbf_output': rest_mbf},
+                       {'record': record})
+
         return outputs
 
     def make_batch(self, batch_size, shuffle, buffer_n_batches=100, repeat_count=1, drop_remainder=False):
