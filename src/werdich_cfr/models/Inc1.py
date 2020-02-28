@@ -32,7 +32,7 @@ class Inc1model:
         # CONV_1x1
         conv_1x1 = Conv3D(filters_1x1, (1, 1, 1), padding='same', activation='relu', kernel_initializer=self.kernel_init,
                           bias_initializer=self.bias_init, trainable=trainable)(x)
-        conv_1x1 = BatchNormalization(scale=False, trainable=trainable)(conv_1x1)
+        #conv_1x1 = BatchNormalization(scale=False, trainable=trainable)(conv_1x1)
 
         # CONV_3x3
         conv_3x3 = Conv3D(filters_3x3_reduce, (1, 1, 1), padding='same', activation='relu',
@@ -40,7 +40,7 @@ class Inc1model:
         conv_3x3 = BatchNormalization(scale=False, trainable=trainable)(conv_3x3)
         conv_3x3 = Conv3D(filters_3x3, (3, 3, 3), padding='same', activation='relu', kernel_initializer=self.kernel_init,
                           bias_initializer=self.bias_init, trainable=trainable)(conv_3x3)
-        conv_3x3 = BatchNormalization(scale=False, trainable=trainable)(conv_3x3)
+        #conv_3x3 = BatchNormalization(scale=False, trainable=trainable)(conv_3x3)
 
         # CONV_5x5
         conv_5x5 = Conv3D(filters_5x5_reduce, (1, 1, 1), padding='same', activation='relu',
