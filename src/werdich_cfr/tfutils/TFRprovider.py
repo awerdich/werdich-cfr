@@ -100,21 +100,17 @@ class DatasetProvider:
     ''' Creates a dataset from a list of .tfrecords files.'''
 
     def __init__(self,
-                 tfr_file_list,
-                 n_frames,
                  cfr_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
                  im_scale_factor=None,
-                 record_output=False):
+                 model_outputs=True):
 
-        self.tfr_file_list = tfr_file_list
-        self.n_frames = n_frames
         self.cfr_boundaries = cfr_boundaries
         self.output_height = output_height
         self.output_width = output_width
         self.im_scale_factor = im_scale_factor
-        self.record_output = record_output
+        self.model_outputs = model_outputs
 
     @tf.function
     def _cfr_label(self, cfr_value):
@@ -143,7 +139,7 @@ class DatasetProvider:
                                              target_height=self.output_height,
                                              target_width=self.output_width)
         else:
-            # Re-size the image with a single scale factor, then pad to output_size
+            # Re-size the image with a single scale factor, then pad or crop to output_size
             im_size = tf.cast(tf.slice(shape, [0], [2]), dtype=tf.float32)
             new_im_size = tf.cast(tf.math.ceil(tf.math.scalar_mul(self.im_scale_factor, im_size)), tf.int32)
             image = tf.image.resize(image, size=new_im_size, antialias=True)
@@ -187,13 +183,12 @@ class DatasetProvider:
 
         # categorical and regression outputs (tuple of dicts)
 
-        if not self.record_output:
-            # For training, use only model input/outputs
+        if self.model_outputs:
+            # Training outputs: Only what the model needs
             outputs = ({'video': self._process_image(image, shape)},
-                       {'class_output': self._cfr_label(cfr),
-                        'score_output': cfr,
-                        'mbf': rest_mbf})
+                       {'score_output': cfr})
         else:
+            # Enable all other outputs
             outputs = ({'video': self._process_image(image, shape)},
                        {'class_output': self._cfr_label(cfr),
                         'score_output': cfr,
@@ -202,24 +197,25 @@ class DatasetProvider:
 
         return outputs
 
-    def make_batch(self, batch_size, shuffle, buffer_n_batches=100, repeat_count=1, drop_remainder=False):
+    def make_batch(self, tfr_file_list, batch_size, shuffle,
+                   buffer_n_batches=100, repeat_count=1, drop_remainder=False):
 
         # Shuffle data
         if shuffle:
 
             #n_parallel_calls = tf.data.experimental.AUTOTUNE
 
-            files = tf.data.Dataset.list_files(self.tfr_file_list, shuffle = True)
+            files = tf.data.Dataset.list_files(tfr_file_list, shuffle = True)
 
             dataset = files.interleave(tf.data.TFRecordDataset,
-                                       cycle_length = len(self.tfr_file_list),
+                                       cycle_length = len(tfr_file_list),
                                        num_parallel_calls = None)
 
             dataset = dataset.shuffle(buffer_size = buffer_n_batches * batch_size,
                                       reshuffle_each_iteration = True)
 
         else:
-            dataset = tf.data.TFRecordDataset(self.tfr_file_list)
+            dataset = tf.data.TFRecordDataset(tfr_file_list)
             #n_parallel_calls = 1
 
         # Parse records

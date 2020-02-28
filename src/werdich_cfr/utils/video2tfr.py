@@ -15,7 +15,6 @@ from werdich_cfr.tfutils.TFRprovider import Dset
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200227'
 # Additional information for filename
-tfr_info = 'resized'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
@@ -49,8 +48,8 @@ def im_scale(im, dx, dy):
     im_scaled = np.uint8((im - np.amin(im))/(np.amax(im) - np.amin(im))*256)
     #im_scaled_eq = cv2.equalizeHist(im_scaled) # histogram equalization (not needed)
     if (dx is not None) & (dy is not None):
-        width = int(np.round(im_scaled.shape[1]*5*dx))
-        height = int(np.round(im_scaled.shape[0]*5*dy))
+        width = int(np.round(im_scaled.shape[1]*7.5*dx))
+        height = int(np.round(im_scaled.shape[0]*7.5*dy))
         im_resized = cv2.resize(im_scaled, (width, height), interpolation=cv2.INTER_LINEAR)
     else:
         im_resized = im_scaled
@@ -106,6 +105,7 @@ def subsample_video(image_array, frame_time, min_rate, min_frames):
 #%% Select one view and process files
 
 view = 'a4c'
+tfr_info = 'resized75'
 
 for mode in meta_df['mode'].unique():
 
