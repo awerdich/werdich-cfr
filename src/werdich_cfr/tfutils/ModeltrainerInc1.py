@@ -7,6 +7,7 @@ pd.set_option('display.max_rows', 50)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 
+import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
 
 # Custom imports
@@ -23,9 +24,9 @@ class VideoTrainer:
         self.train_dict = train_dict # Training parameter
 
     def create_dataset_provider(self):
-        dataset_provider = DatasetProvider(output_height=model_dict['im_size'][0],
-                                           output_width=model_dict['im_size'][1],
-                                           im_scale_factor=model_dict['im_scale_factor'],
+        dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
+                                           output_width=self.model_dict['im_size'][1],
+                                           im_scale_factor=self.model_dict['im_scale_factor'],
                                            model_outputs=True)
         return dataset_provider
 
@@ -49,10 +50,10 @@ class VideoTrainer:
         metrics={'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
 
         # Optimizer
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=train_dict['learning_rate'])
+        optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
 
         # Build the model
-        mirrored_strategy = tf.distribute.MirroredStrategy()
+        mirrored_strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
         with mirrored_strategy.scope():
             model = Inc1model(model_dict=self.model_dict).video_encoder()
             model.compile(loss=loss,

@@ -7,6 +7,22 @@ import tensorflow as tf
 # Custom imports
 from werdich_cfr.tfutils.ModeltrainerInc1 import VideoTrainer
 
+#%% GPU CONFIG
+
+# GPUs
+os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3'
+
+physical_devices = tf.config.list_physical_devices('GPU')
+print("AVAILABLE GPUs: ", len(physical_devices))
+try:
+  for dev in physical_devices:
+    tf.config.experimental.set_memory_growth(dev, True)
+except:
+  # Invalid device or cannot modify virtual devices once initialized.
+  pass
+
+
 #%% Some support functions
 
 def write_model_dict(model_dict, file):
@@ -17,17 +33,13 @@ def write_model_dict(model_dict, file):
 #%% Directories and data sets
 
 # Model name
-model_name = 'testmodel'
+model_name = 'cfr0229dgx'
 
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_200227')
 train_files = glob.glob(os.path.join(tfr_data_dir, 'cfr_resized75_a4c_train_200227_*.tfrecords'))
 eval_files = glob.glob(os.path.join(tfr_data_dir, 'cfr_resized75_a4c_eval_200227_*.tfrecords'))
-
-# GPUs
-os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES']='0,1'
 
 # Model parameters
 model_dict = {'name': 'testmodel',
@@ -41,8 +53,8 @@ model_dict = {'name': 'testmodel',
 
 # Training parameters
 train_dict = {'learning_rate': 0.0001,
-              'train_batch_size': 4,
-              'eval_batch_size': 4,
+              'train_batch_size': 40,
+              'eval_batch_size': 40,
               'validation_batches': None,
               'validation_freq': 1,
               'n_epochs': 100,
@@ -63,6 +75,7 @@ write_model_dict(train_dict, train_dict_file)
 # Compile the model
 VT = VideoTrainer(log_dir=log_dir, model_dict=model_dict, train_dict=train_dict)
 model=VT.compile_inc1model()
+model.summary()
 
 # Run the training and save the history data
 hist=VT.train(model)

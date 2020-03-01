@@ -149,7 +149,7 @@ class DatasetProvider:
                                                      target_width=self.output_width)
 
         # Scale image to have mean 0 and variance 1
-        image = tf.cast(image, tf.float64)
+        image = tf.cast(image, tf.float32)
         image = tf.image.adjust_contrast(image, contrast_factor=5)
         output_image = tf.image.per_image_standardization(image)
 
