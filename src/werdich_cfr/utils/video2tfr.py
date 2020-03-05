@@ -13,7 +13,7 @@ from werdich_cfr.tfutils.TFRprovider import Dset
 
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200227'
+meta_date = '200304'
 # Additional information for filename
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
@@ -27,7 +27,8 @@ meta_df = meta_df_original[(0 < meta_df_original.deltaX) & (meta_df_original.del
                            (0 < meta_df_original.deltaY) & (meta_df_original.deltaY < 1)]
 print('After removing invalid scale factors {}'.format(len(meta_df.filename.unique())))
 
-max_samples_per_file = 2000
+#max_samples_per_file = 2000
+n_tfr_files = 8 # We should have one TFR file per GPU
 
 # This should give us ~70% useful files
 min_rate = 21 # Minimum acceptable frame rate [fps]
@@ -120,7 +121,9 @@ for mode in meta_df['mode'].unique():
 
     file_list_complete = list(df.filename.unique())
     # Split filename_list into multiple parts
-    file_list_parts = list(chunks(file_list_complete, max_samples_per_file))
+    # n_samples_per_file = max_samples_per_file
+    n_samples_per_file = int(np.ceil(len(file_list_complete)/n_tfr_files))
+    file_list_parts = list(chunks(file_list_complete, n_samples_per_file))
     mag = int(np.floor(np.log10(len(file_list_parts)))) + 1
 
     # Each part will have its own TFR filename
