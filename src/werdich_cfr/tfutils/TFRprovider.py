@@ -186,9 +186,9 @@ class DatasetProvider:
         if self.model_outputs:
             # Training outputs: Only what the model needs
             outputs = ({'video': self._process_image(image, shape)},
-                       {'score_output': cfr})
+                       {'mbf_output': rest_mbf})
         else:
-            # Enable all other outputs
+            # Enable all other outputs for testing.
             outputs = ({'video': self._process_image(image, shape)},
                        {'class_output': self._cfr_label(cfr),
                         'score_output': cfr,

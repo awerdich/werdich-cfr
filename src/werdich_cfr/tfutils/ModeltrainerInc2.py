@@ -12,7 +12,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStoppi
 
 # Custom imports
 from werdich_cfr.tfutils.TFRprovider import DatasetProvider
-from werdich_cfr.models.Inc1 import Inc1model
+from werdich_cfr.models.Inc2 import Inc2model
 
 #%% Video trainer
 
@@ -42,12 +42,16 @@ class VideoTrainer:
 
         return steps_per_epoch
 
-    def compile_inc1model(self):
+    def compile_inc2model(self):
         """ Set up the model with loss function, metrics, etc. """
 
         # Loss and accuracy metrics for each output
-        loss={'score_output': tf.keras.losses.MeanSquaredError()}
-        metrics={'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
+        loss = {'mbf_output': tf.keras.losses.MeanSquaredError()}
+
+        #loss_weights = {'cfr_output': self.train_dict['loss_weight_cfr'],
+        #               'mbf_output': self.train_dict['loss_weight_mbf']}
+
+        metrics = {'mbf_output': tf.keras.metrics.MeanAbsolutePercentageError()}
 
         # Optimizer
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
@@ -56,7 +60,7 @@ class VideoTrainer:
         # mirrored_strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
         mirrored_strategy = tf.distribute.MirroredStrategy(devices=self.train_dict['train_device_list'])
         with mirrored_strategy.scope():
-            model = Inc1model(model_dict=self.model_dict).video_encoder()
+            model = Inc2model(model_dict=self.model_dict).video_encoder()
             model.compile(loss=loss,
                           optimizer=optimizer,
                           metrics=metrics)
@@ -104,14 +108,14 @@ class VideoTrainer:
                                                shuffle=False,
                                                buffer_n_batches=None,
                                                repeat_count=1,
-                                               drop_remainder=False)
+                                               drop_remainder=True)
 
         hist = model.fit(x=train_set,
                          epochs=self.train_dict['n_epochs'],
                          verbose=self.train_dict['verbose'],
                          validation_data=eval_set,
                          initial_epoch=0,
-                         steps_per_epoch=train_steps_per_epoch,
+                         steps_per_epoch=16,
                          validation_steps=self.train_dict['validation_batches'],
                          validation_freq=self.train_dict['validation_freq'],
                          callbacks=self.create_callbacks())

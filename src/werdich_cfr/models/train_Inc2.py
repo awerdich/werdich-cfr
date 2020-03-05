@@ -5,11 +5,11 @@ import pickle
 import tensorflow as tf
 
 # Custom imports
-from werdich_cfr.tfutils.ModeltrainerInc1 import VideoTrainer
+from werdich_cfr.tfutils.ModeltrainerInc2 import VideoTrainer
 
 #%% GPU CONFIGURATION
 # GPU
-use_device_string = '0,1'
+use_device_string = '0,1,2,3'
 use_device_idx = list(range(len(use_device_string.split(','))))
 
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -42,7 +42,7 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-model_name = 'cfr'+cfr_meta_date+'gpu4'
+model_name = 'mbf'+cfr_meta_date+'gpu4'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date)
@@ -66,13 +66,13 @@ model_dict = {'name': model_name,
 # Training parameters
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
-              'train_batch_size': 20,
-              'eval_batch_size': 20,
+              'train_batch_size': 8,
+              'eval_batch_size': 8,
               'validation_batches': None,
               'validation_freq': 1,
               'n_epochs': 100,
               'verbose': 1,
-              'buffer_n_batches_train': 8,
+              'buffer_n_batches_train': 4,
               'train_file_list': train_files,
               'eval_file_list': eval_files}
 
@@ -87,7 +87,7 @@ write_model_dict(train_dict, train_dict_file)
 
 # Compile the model
 VT = VideoTrainer(log_dir=log_dir, model_dict=model_dict, train_dict=train_dict)
-model=VT.compile_inc1model()
+model=VT.compile_inc2model()
 model.summary()
 
 # Run the training and save the history data
