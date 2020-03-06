@@ -12,18 +12,19 @@ from tensorflow.keras.layers import (BatchNormalization, Conv3D, MaxPooling3D, D
 class Inc2model:
 
     """
-    INCEPTION 3D MODEL WITH cfr and blood flow (rest_mbf) as outputs
+    INCEPTION 3D MODEL 2
+    Output can be cfr or mbf regression
     """
 
     def __init__(self, model_dict):
 
         # NETWORK PARAMETERS AS DICTIONARY
-        self.im_size=model_dict['im_size']
-        self.n_frames=model_dict['n_frames']
-        self.fc_nodes=model_dict['fc_nodes']
-        self.filters=model_dict['filters']
-        self.kernel_init=model_dict['kernel_init']
-        self.bias_init=model_dict['bias_init']
+        self.im_size = model_dict['im_size']
+        self.n_frames = model_dict['n_frames']
+        self.fc_nodes = model_dict['fc_nodes']
+        self.filters = model_dict['filters']
+        self.kernel_init = model_dict['kernel_init']
+        self.bias_init = model_dict['bias_init']
 
     def inception_module(self, x, filters_1x1, filters_3x3_reduce, filters_3x3, filters_5x5_reduce, filters_5x5,
                          filters_pool_proj):
@@ -144,15 +145,15 @@ class Inc2model:
         x = BatchNormalization(scale=False)(x)
 
         # OUTPUT LAYERS
-        x = Flatten()(x)
-        #x = GlobalAveragePooling3D()(x)
+        #x = Flatten()(x)
+        x = GlobalAveragePooling3D()(x)
         x = Dropout(0.4)(x)
 
         # MBF OUTPUT
-        mbf_output = Dense(self.fc_nodes, activation='relu')(x)
-        mbf_output = BatchNormalization(scale=False)(mbf_output)
-        mbf_output = Dense(1, name='mbf_output', activation=None)(mbf_output)
+        score_output = Dense(self.fc_nodes, activation='relu')(x)
+        score_output = BatchNormalization(scale=False)(score_output)
+        score_output = Dense(1, name='score_output', activation=None)(score_output)
 
-        model = Model(inputs=video, outputs=mbf_output)
+        model = Model(inputs=video, outputs=score_output)
 
         return model

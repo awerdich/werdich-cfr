@@ -42,7 +42,7 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-model_name = 'mbf'+cfr_meta_date+'gpu4'
+model_name = 'meta'+cfr_meta_date+'fc64_rmbf_'+'0305gpu4'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date)
@@ -59,18 +59,21 @@ model_dict = {'name': model_name,
               'im_scale_factor': 1.177,
               'n_frames': 40,
               'filters': 64,
-              'fc_nodes': 128,
+              'fc_nodes': 64,
+              'model_output': 'rest_mbf',
               'kernel_init': tf.keras.initializers.GlorotNormal(),
               'bias_init': tf.keras.initializers.Zeros()}
+
+print('model_output: {}'.format(model_dict['model_output']))
 
 # Training parameters
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
-              'train_batch_size': 8,
-              'eval_batch_size': 8,
+              'train_batch_size': 12,
+              'eval_batch_size': 12,
               'validation_batches': None,
               'validation_freq': 1,
-              'n_epochs': 100,
+              'n_epochs': 150,
               'verbose': 1,
               'buffer_n_batches_train': 4,
               'train_file_list': train_files,

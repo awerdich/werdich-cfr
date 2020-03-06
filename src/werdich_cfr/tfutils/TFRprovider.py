@@ -104,13 +104,13 @@ class DatasetProvider:
                  output_height=299,
                  output_width=299,
                  im_scale_factor=None,
-                 model_outputs=True):
+                 model_output='cfr'):
 
         self.cfr_boundaries = cfr_boundaries
         self.output_height = output_height
         self.output_width = output_width
         self.im_scale_factor = im_scale_factor
-        self.model_outputs = model_outputs
+        self.model_output = model_output
 
     @tf.function
     def _cfr_label(self, cfr_value):
@@ -181,21 +181,24 @@ class DatasetProvider:
         stress_mbf = example['stress_mbf']
         record = example['record']
 
-        # categorical and regression outputs (tuple of dicts)
+        # Create output tuple
 
-        if self.model_outputs:
-            # Training outputs: Only what the model needs
-            outputs = ({'video': self._process_image(image, shape)},
-                       {'mbf_output': rest_mbf})
+        video_output = {'video': self._process_image(image, shape)}
+
+        if self.model_output == 'cfr':
+            score_output = {'score_output': cfr}
+        elif self.model_output == 'rest_mbf':
+            score_output = {'score_output': rest_mbf}
+        elif self.model_output == 'stress_mbf':
+            score_output = {'score_output': stress_mbf}
         else:
-            # Enable all other outputs for testing.
-            outputs = ({'video': self._process_image(image, shape)},
-                       {'class_output': self._cfr_label(cfr),
-                        'score_output': cfr,
-                        'mbf_output': rest_mbf},
-                       {'record': record})
+            # Enable all outputs for testing.
+            score_output = {'class_output': self._cfr_label(cfr),
+                            'cfr_output': cfr,
+                            'mbf_output': rest_mbf,
+                            'record': record}
 
-        return outputs
+        return (video_output, score_output)
 
     def make_batch(self, tfr_file_list, batch_size, shuffle,
                    buffer_n_batches=100, repeat_count=1, drop_remainder=False):

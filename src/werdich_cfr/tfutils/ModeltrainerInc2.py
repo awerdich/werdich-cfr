@@ -20,14 +20,14 @@ class VideoTrainer:
 
     def __init__(self, log_dir, model_dict, train_dict):
         self.log_dir = log_dir
-        self.model_dict = model_dict # Model parameter
-        self.train_dict = train_dict # Training parameter
+        self.model_dict = model_dict
+        self.train_dict = train_dict
 
     def create_dataset_provider(self):
         dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
                                            output_width=self.model_dict['im_size'][1],
                                            im_scale_factor=self.model_dict['im_scale_factor'],
-                                           model_outputs=True)
+                                           model_output=self.model_dict['model_output'])
         return dataset_provider
 
     def count_steps_per_epoch(self, tfr_file_list, batch_size):
@@ -46,12 +46,12 @@ class VideoTrainer:
         """ Set up the model with loss function, metrics, etc. """
 
         # Loss and accuracy metrics for each output
-        loss = {'mbf_output': tf.keras.losses.MeanSquaredError()}
+        loss = {'score_output': tf.keras.losses.MeanSquaredError()}
 
         #loss_weights = {'cfr_output': self.train_dict['loss_weight_cfr'],
         #               'mbf_output': self.train_dict['loss_weight_mbf']}
 
-        metrics = {'mbf_output': tf.keras.metrics.MeanAbsolutePercentageError()}
+        metrics = {'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
 
         # Optimizer
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
@@ -80,7 +80,7 @@ class VideoTrainer:
         tensorboard_callback = TensorBoard(log_dir=self.log_dir,
                                            histogram_freq=1,
                                            write_graph=True,
-                                           update_freq=100,
+                                           update_freq=10,
                                            profile_batch=0,
                                            embeddings_freq=0)
 
@@ -95,7 +95,7 @@ class VideoTrainer:
         train_steps_per_epoch = self.count_steps_per_epoch(tfr_file_list=self.train_dict['train_file_list'],
                                                            batch_size=self.train_dict['train_batch_size'])
 
-        dataset_provider=self.create_dataset_provider()
+        dataset_provider = self.create_dataset_provider()
         train_set = dataset_provider.make_batch(tfr_file_list=self.train_dict['train_file_list'],
                                                 batch_size=self.train_dict['train_batch_size'],
                                                 shuffle=True,
@@ -115,7 +115,7 @@ class VideoTrainer:
                          verbose=self.train_dict['verbose'],
                          validation_data=eval_set,
                          initial_epoch=0,
-                         steps_per_epoch=16,
+                         steps_per_epoch=train_steps_per_epoch,
                          validation_steps=self.train_dict['validation_batches'],
                          validation_freq=self.train_dict['validation_freq'],
                          callbacks=self.create_callbacks())
