@@ -92,7 +92,7 @@ class VideoTrainer:
                                            profile_batch=0,
                                            embeddings_freq=0)
 
-        callback_list = [checkpoint_callback, tensorboard_callback, self.Gcallback()]
+        callback_list = [checkpoint_callback, tensorboard_callback]
 
         return callback_list
 
