@@ -212,7 +212,7 @@ class DatasetProvider:
 
             dataset = files.interleave(tf.data.TFRecordDataset,
                                        cycle_length = len(tfr_file_list),
-                                       num_parallel_calls = None)
+                                       num_parallel_calls = tf.data.experimental.AUTOTUNE)
 
             dataset = dataset.shuffle(buffer_size = buffer_n_batches * batch_size,
                                       reshuffle_each_iteration = True)
@@ -222,7 +222,9 @@ class DatasetProvider:
             #n_parallel_calls = 1
 
         # Parse records
-        dataset = dataset.map(map_func=self._parse, num_parallel_calls = None)
+        dataset = dataset.map(map_func=self._parse,
+                              num_parallel_calls=tf.data.experimental.AUTOTUNE).\
+            cache().prefetch(tf.data.experimental.AUTOTUNE)
 
         # Batch it up
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

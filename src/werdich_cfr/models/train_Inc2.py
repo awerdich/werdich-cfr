@@ -9,7 +9,7 @@ from werdich_cfr.tfutils.ModeltrainerInc2 import VideoTrainer
 
 #%% GPU CONFIGURATION
 # GPU
-use_device_string = '0,1,2,3'
+use_device_string = '0,1'
 use_device_idx = list(range(len(use_device_string.split(','))))
 
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -42,7 +42,7 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-model_name = 'meta'+cfr_meta_date+'fc64_rmbf_'+'0305gpu4'
+model_name = 'meta'+cfr_meta_date+'fc64_cfr_'+'0307gpu2'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date)
@@ -59,7 +59,7 @@ model_dict = {'name': model_name,
               'im_scale_factor': 1.177,
               'n_frames': 40,
               'filters': 64,
-              'fc_nodes': 64,
+              'fc_nodes': 128,
               'model_output': 'rest_mbf',
               'kernel_init': tf.keras.initializers.GlorotNormal(),
               'bias_init': tf.keras.initializers.Zeros()}

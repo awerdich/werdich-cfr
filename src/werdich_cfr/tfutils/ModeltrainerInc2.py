@@ -1,5 +1,5 @@
 import os
-import glob
+import gc
 import pandas as pd
 import numpy as np
 
@@ -14,6 +14,13 @@ from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStoppi
 from werdich_cfr.tfutils.TFRprovider import DatasetProvider
 from werdich_cfr.models.Inc2 import Inc2model
 
+#%% Custom callbacks for information about training
+
+class Gcallback(tf.keras.callbacks.Callback):
+    """ Cleans memory after every epoch """
+    def on_train_batch_end(self, batch, logs=None):
+        gc.collect()
+
 #%% Video trainer
 
 class VideoTrainer:
@@ -22,6 +29,7 @@ class VideoTrainer:
         self.log_dir = log_dir
         self.model_dict = model_dict
         self.train_dict = train_dict
+        self.Gcallback = Gcallback
 
     def create_dataset_provider(self):
         dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
@@ -84,7 +92,7 @@ class VideoTrainer:
                                            profile_batch=0,
                                            embeddings_freq=0)
 
-        callback_list = [checkpoint_callback, tensorboard_callback]
+        callback_list = [checkpoint_callback, tensorboard_callback, self.Gcallback()]
 
         return callback_list
 
