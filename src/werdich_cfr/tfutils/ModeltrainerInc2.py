@@ -18,7 +18,7 @@ from werdich_cfr.models.Inc2 import Inc2model
 
 class Gcallback(tf.keras.callbacks.Callback):
     """ Cleans memory after every epoch """
-    def on_train_batch_end(self, batch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         gc.collect()
 
 #%% Video trainer
@@ -92,7 +92,7 @@ class VideoTrainer:
                                            profile_batch=0,
                                            embeddings_freq=0)
 
-        callback_list = [checkpoint_callback, tensorboard_callback]
+        callback_list = [checkpoint_callback, tensorboard_callback, Gcallback()]
 
         return callback_list
 
