@@ -1,5 +1,6 @@
 import os
 import gc
+import glob
 import pandas as pd
 import numpy as np
 
@@ -132,3 +133,40 @@ class VideoTrainer:
         model.save(os.path.join(self.log_dir, self.model_dict['name'] + '.h5'))
 
         return hist
+
+    def predict_from_tfrecords(self, model, tfr_file_list):
+
+        dataset_provider = self.create_dataset_provider()
+        dset = dataset_provider.make_batch(tfr_file_list=tfr_file_list,
+                                           batch_size=2,
+                                           shuffle=False,
+                                           buffer_n_batches=None,
+                                           repeat_count=1,
+                                           drop_remainder=False)
+        return dset
+
+#%% Predictions DEVELOP CODE
+
+# Directories
+tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200304')
+log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/meta200304_cfr_0308gpu2')
+
+# Open model dict
+model_dict_file = os.path.join(log_dir, 'meta200304_cfr_0308gpu2_model_dict.pkl')
+
+
+
+
+tfr_test_file_list = sorted(glob.glob(os.path.join(tfr_dir, '*_test_*.parquet')))
+parquet_file_list = [file.replace('.tfrecords', '.parquet') for file in tfr_test_file_list]
+
+
+checkpoint_file_list = sorted(glob.glob(os.path.join(log_dir, model_dict['name']+'*_chkpt_*.hdf5')))
+
+
+idx = 3
+tfr_file = tfr_test_file_list[idx]
+parquet_file = parquet_file_list[idx]
+print(tfr_file)
+print(parquet_file)
+
