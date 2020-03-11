@@ -15,7 +15,6 @@ from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStoppi
 # Custom imports
 from werdich_cfr.tfutils.TFRprovider import DatasetProvider
 from werdich_cfr.models.Inc2 import Inc2model
-from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% Custom callbacks for information about training
 

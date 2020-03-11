@@ -10,7 +10,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% Some support functions
 
@@ -23,8 +23,8 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-#model_name = 'meta'+cfr_meta_date+'_cfr_'+'0307gpu2'
-model_name = 'meta'+cfr_meta_date+'_testmodel'
+model_name = 'meta'+cfr_meta_date+'_restmbf_'+'0311gpu2'
+#model_name = 'meta'+cfr_meta_date+'_testmodel'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date)
@@ -41,8 +41,8 @@ model_dict = {'name': model_name,
               'im_scale_factor': 1.177,
               'n_frames': 40,
               'filters': 64,
-              'fc_nodes': 128,
-              'model_output': 'cfr',
+              'fc_nodes': 1,
+              'model_output': 'rest_mbf',
               'kernel_init': tf.keras.initializers.GlorotNormal(),
               'bias_init': tf.keras.initializers.Zeros()}
 
@@ -51,8 +51,8 @@ print('model_output: {}'.format(model_dict['model_output']))
 # Training parameters
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
-              'train_batch_size': 20,
-              'eval_batch_size': 20,
+              'train_batch_size': 18,
+              'eval_batch_size': 18,
               'validation_batches': None,
               'validation_freq': 1,
               'n_epochs': 150,
@@ -71,11 +71,11 @@ write_model_dict(model_dict, model_dict_file)
 write_model_dict(train_dict, train_dict_file)
 
 # Compile the model
-#VT = VideoTrainer(log_dir=log_dir, model_dict=model_dict, train_dict=train_dict)
-#model=VT.compile_inc2model()
-#model.summary()
+VT = VideoTrainer(log_dir=log_dir, model_dict=model_dict, train_dict=train_dict)
+model=VT.compile_inc2model()
+model.summary()
 
 # Run the training and save the history data
-#hist=VT.train(model)
-#hist_file = os.path.join(log_dir, model_name+'_hist_dict.pkl')
-#write_model_dict(hist.history, hist_file)
+hist=VT.train(model)
+hist_file = os.path.join(log_dir, model_name+'_hist_dict.pkl')
+write_model_dict(hist.history, hist_file)
