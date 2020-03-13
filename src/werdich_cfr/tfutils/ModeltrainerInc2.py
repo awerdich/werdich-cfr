@@ -37,6 +37,7 @@ class VideoTrainer:
         dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
                                            output_width=self.model_dict['im_size'][1],
                                            im_scale_factor=self.model_dict['im_scale_factor'],
+                                           augment=self.train_dict['augment'],
                                            model_output=self.model_dict['model_output'])
         return dataset_provider
 

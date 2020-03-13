@@ -23,7 +23,7 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-model_name = 'meta'+cfr_meta_date+'_restmbf_'+'0311gpu2'
+model_name = 'meta'+cfr_meta_date+'_restmbf_aug_'+'0313gpu2'
 #model_name = 'meta'+cfr_meta_date+'_testmodel'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
@@ -51,11 +51,12 @@ print('model_output: {}'.format(model_dict['model_output']))
 # Training parameters
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
+              'augment': True,
               'train_batch_size': 18,
               'eval_batch_size': 18,
               'validation_batches': None,
               'validation_freq': 1,
-              'n_epochs': 150,
+              'n_epochs': 500,
               'verbose': 1,
               'buffer_n_batches_train': 4,
               'train_file_list': train_files,

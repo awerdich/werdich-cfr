@@ -12,6 +12,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
+import tensorflow_addons as tfa
 from pdb import set_trace
 from tensorflow.keras.applications.inception_v3 import preprocess_input as preprocV3
 
@@ -104,12 +105,14 @@ class DatasetProvider:
                  output_height=299,
                  output_width=299,
                  im_scale_factor=None,
+                 augment=False,
                  model_output='cfr'):
 
         self.cfr_boundaries = cfr_boundaries
         self.output_height = output_height
         self.output_width = output_width
         self.im_scale_factor = im_scale_factor
+        self.augment = augment
         self.model_output = model_output
 
     @tf.function
@@ -125,6 +128,24 @@ class DatasetProvider:
             if (cfr_value >= percentile_list[p - 1]) & (cfr_value < percentile_list[p]):
                 label = p
         return tf.one_hot(label, depth = len(percentile_list)+1)
+
+    def augment_image(self, image):
+
+        # maximum rotation angle in degrees
+        max_ang_deg = 15
+        max_ang = np.pi / 180 * max_ang_deg
+
+        # Random rotation
+        image = tfa.image.rotate(image, tf.random.uniform(shape=[],
+                                                          minval=-max_ang, maxval=max_ang,
+                                                          dtype=tf.float32),
+                                 interpolation='NEAREST')
+
+        # Brightness, contrast
+        image = tf.image.random_brightness(image, 0.5)
+        image = tf.image.random_contrast(image, 0.7, 2.5)
+
+        return image
 
     def _process_image(self, image, shape):
 
@@ -147,6 +168,9 @@ class DatasetProvider:
             image = tf.image.resize_with_crop_or_pad(image,
                                                      target_height=self.output_height,
                                                      target_width=self.output_width)
+        # Augment images
+        if self.augment:
+            image = self.augment_image(image)
 
         # Scale image to have mean 0 and variance 1
         image = tf.cast(image, tf.float32)

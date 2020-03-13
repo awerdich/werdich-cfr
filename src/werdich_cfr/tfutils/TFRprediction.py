@@ -17,9 +17,9 @@ physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 # Directories and files
 tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200304')
-log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/meta200304_cfr_0308gpu2')
+log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/meta200304_restmbf_0311gpu2')
 model_name = os.path.basename(log_dir)
-checkpoint_file = os.path.join(log_dir, 'meta200304_cfr_0308gpu2_chkpt_149.h5')
+checkpoint_file = os.path.join(log_dir, 'meta200304_restmbf_0311gpu2_chkpt_149.h5')
 
 # We need the model_dict for the correct image transformations
 model_dict_file = os.path.join(log_dir, model_name+'_model_dict.pkl')
@@ -34,7 +34,7 @@ dataset_basename = os.path.basename(tfr_file_list[0]).split('.')[0].rsplit('_', 
 testset_provider = DatasetProvider(output_height=model_dict['im_size'][0],
                                    output_width=model_dict['im_size'][1],
                                    im_scale_factor=model_dict['im_scale_factor'],
-                                   model_output='cfr')
+                                   model_output=model_dict['model_output'])
 
 testset = testset_provider.make_batch(tfr_file_list=tfr_file_list,
                                       batch_size=16,
