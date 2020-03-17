@@ -4,8 +4,11 @@ import pickle
 
 # Custom imports
 from werdich_cfr.tfutils.Modeltrainer import VideoTrainer
+from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% Some support functions
+
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 def write_model_dict(model_dict, file):
     with open(file, 'wb') as f:
@@ -15,7 +18,7 @@ def write_model_dict(model_dict, file):
 #%% Directories and data sets
 tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200208')
 log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log')
-p_list = [1.259, 1.591, 2.066]
+p_list = [0.688, 0.865, 1.139]
 
 # Training and evaluation files
 train_files = glob.glob(os.path.join(tfr_dir, 'cfr_resized_a4c_train_200208_*.tfrecords'))
