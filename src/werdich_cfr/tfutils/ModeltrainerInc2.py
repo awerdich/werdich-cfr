@@ -10,7 +10,7 @@ pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 
 import tensorflow as tf
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, Callback
 
 # Custom imports
 from werdich_cfr.tfutils.TFRprovider import DatasetProvider
@@ -18,10 +18,17 @@ from werdich_cfr.models.Inc2 import Inc2model
 
 #%% Custom callbacks for information about training
 
-class Gcallback(tf.keras.callbacks.Callback):
+class Gcallback(Callback):
     """ Cleans memory after every epoch """
     def on_epoch_end(self, epoch, logs=None):
         gc.collect()
+
+class ComputeCorrelation(Callback):
+    """ Compute correlation coefficient after each epoch """
+    def on_epoch_end(self, epoch, logs=None):
+        print('Running external evaluation.')
+        logs['spearmanr'] = epoch ** 2
+
 
 #%% Video trainer
 
@@ -33,11 +40,11 @@ class VideoTrainer:
         self.train_dict = train_dict
         self.Gcallback = Gcallback
 
-    def create_dataset_provider(self):
+    def create_dataset_provider(self, augment):
         dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
                                            output_width=self.model_dict['im_size'][1],
                                            im_scale_factor=self.model_dict['im_scale_factor'],
-                                           augment=self.train_dict['augment'],
+                                           augment=augment,
                                            model_output=self.model_dict['model_output'])
         return dataset_provider
 
@@ -95,6 +102,7 @@ class VideoTrainer:
                                            profile_batch=0,
                                            embeddings_freq=0)
 
+        #callback_list = [checkpoint_callback, tensorboard_callback, ComputeCorrelation()]
         callback_list = [checkpoint_callback, tensorboard_callback]
 
         return callback_list
@@ -106,15 +114,17 @@ class VideoTrainer:
         train_steps_per_epoch = self.count_steps_per_epoch(tfr_file_list=self.train_dict['train_file_list'],
                                                            batch_size=self.train_dict['train_batch_size'])
 
-        dataset_provider = self.create_dataset_provider()
-        train_set = dataset_provider.make_batch(tfr_file_list=self.train_dict['train_file_list'],
+        trainset_provider = self.create_dataset_provider(augment=self.train_dict['augment'])
+        evalset_provider = self.create_dataset_provider(augment=False)
+
+        train_set = trainset_provider.make_batch(tfr_file_list=self.train_dict['train_file_list'],
                                                 batch_size=self.train_dict['train_batch_size'],
                                                 shuffle=True,
                                                 buffer_n_batches=self.train_dict['buffer_n_batches_train'],
                                                 repeat_count=None,
                                                 drop_remainder=True)
 
-        eval_set = dataset_provider.make_batch(tfr_file_list=self.train_dict['eval_file_list'],
+        eval_set = evalset_provider.make_batch(tfr_file_list=self.train_dict['eval_file_list'],
                                                batch_size=self.train_dict['eval_batch_size'],
                                                shuffle=False,
                                                buffer_n_batches=None,

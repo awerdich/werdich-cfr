@@ -23,16 +23,20 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-model_name = 'meta'+cfr_meta_date+'_restmbf_aug_'+'0313gpu2'
-#model_name = 'meta'+cfr_meta_date+'_testmodel'
+model_name = 'inc2_restmbf'+'0318gpu2'
+#model_name = 'test_inc2'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date)
 train_files = sorted(glob.glob(os.path.join(tfr_data_dir, 'cfr_resized75_a4c_train_'+cfr_meta_date+'_*.tfrecords')))
 eval_files = sorted(glob.glob(os.path.join(tfr_data_dir, 'cfr_resized75_a4c_eval_'+cfr_meta_date+'_*.tfrecords')))
 
+#  ----- TESTING
+# train_files = eval_files
+
 print('TRAIN:')
 print(*train_files, sep='\n')
+print('EVAL:')
 print(*eval_files, sep='\n')
 
 # Model parameters
@@ -51,16 +55,18 @@ print('model_output: {}'.format(model_dict['model_output']))
 # Training parameters
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
-              'augment': True,
+              'augment': False,
               'train_batch_size': 18,
               'eval_batch_size': 18,
               'validation_batches': None,
               'validation_freq': 1,
-              'n_epochs': 500,
+              'n_epochs': 150,
               'verbose': 1,
               'buffer_n_batches_train': 4,
               'train_file_list': train_files,
               'eval_file_list': eval_files}
+
+#%% Save model parameters
 
 # Save model parameters before training
 # Create the log dir, if it does not exist
