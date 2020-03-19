@@ -1,41 +1,18 @@
 import os
-import gc
 import glob
-import pickle
 import pandas as pd
 import numpy as np
-import pdb
-from scipy.stats import spearmanr
 
 pd.set_option('display.max_rows', 50)
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.width', 1000)
 
 import tensorflow as tf
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, Callback
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
 
 # Custom imports
 from werdich_cfr.tfutils.TFRprovider import DatasetProvider
-from werdich_cfr.models.Inc2 import Inc2model
-
-#%% Custom callbacks for information about training
-
-class Validate(Callback):
-    """ Compute correlation coefficient after each epoch """
-
-    def __init__(self, dataset, labels, n_steps):
-        super().__init__()
-        self.dataset = dataset
-        self.labels = labels
-        self.n_steps = n_steps
-
-    def on_epoch_end(self, epoch, logs=None):
-        print('Evaluation with {} steps from {} samples:'.format(self.n_steps+1, len(self.labels)))
-        predictions = list(self.model.predict(self.dataset, verbose=1, steps=self.n_steps + 1))
-        sp = spearmanr(self.labels, predictions)
-        print('Correlation: {:.3f}'.format(sp[0]))
-        print('p-value:     {:.3f}'.format(sp[1]))
-        tf.summary.scalar('spearmanr', data=sp[0], step=epoch)
+from werdich_cfr.models.Inc1 import Inc1model
 
 #%% Video trainer
 
@@ -43,15 +20,14 @@ class VideoTrainer:
 
     def __init__(self, log_dir, model_dict, train_dict):
         self.log_dir = log_dir
-        self.model_dict = model_dict
-        self.train_dict = train_dict
+        self.model_dict = model_dict # Model parameter
+        self.train_dict = train_dict # Training parameter
 
-    def create_dataset_provider(self, augment):
+    def create_dataset_provider(self):
         dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
                                            output_width=self.model_dict['im_size'][1],
                                            im_scale_factor=self.model_dict['im_scale_factor'],
-                                           augment=augment,
-                                           model_output=self.model_dict['model_output'])
+                                           model_outputs=True)
         return dataset_provider
 
     def count_steps_per_epoch(self, tfr_file_list, batch_size):
@@ -66,16 +42,12 @@ class VideoTrainer:
 
         return steps_per_epoch
 
-    def compile_inc2model(self):
+    def compile_inc1model(self):
         """ Set up the model with loss function, metrics, etc. """
 
         # Loss and accuracy metrics for each output
-        loss = {'score_output': tf.keras.losses.MeanSquaredError()}
-
-        #loss_weights = {'cfr_output': self.train_dict['loss_weight_cfr'],
-        #               'mbf_output': self.train_dict['loss_weight_mbf']}
-
-        metrics = {'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
+        loss={'score_output': tf.keras.losses.MeanSquaredError()}
+        metrics={'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
 
         # Optimizer
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
@@ -84,7 +56,7 @@ class VideoTrainer:
         # mirrored_strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
         mirrored_strategy = tf.distribute.MirroredStrategy(devices=self.train_dict['train_device_list'])
         with mirrored_strategy.scope():
-            model = Inc2model(model_dict=self.model_dict).video_encoder()
+            model = Inc1model(model_dict=self.model_dict).video_encoder()
             model.compile(loss=loss,
                           optimizer=optimizer,
                           metrics=metrics)
@@ -104,7 +76,7 @@ class VideoTrainer:
         tensorboard_callback = TensorBoard(log_dir=self.log_dir,
                                            histogram_freq=1,
                                            write_graph=True,
-                                           update_freq=10,
+                                           update_freq=100,
                                            profile_batch=0,
                                            embeddings_freq=0)
 
@@ -119,33 +91,20 @@ class VideoTrainer:
         train_steps_per_epoch = self.count_steps_per_epoch(tfr_file_list=self.train_dict['train_file_list'],
                                                            batch_size=self.train_dict['train_batch_size'])
 
-        trainset_provider = self.create_dataset_provider(augment=self.train_dict['augment'])
-        evalset_provider = self.create_dataset_provider(augment=False)
-
-        train_set = trainset_provider.make_batch(tfr_file_list=self.train_dict['train_file_list'],
+        dataset_provider=self.create_dataset_provider()
+        train_set = dataset_provider.make_batch(tfr_file_list=self.train_dict['train_file_list'],
                                                 batch_size=self.train_dict['train_batch_size'],
                                                 shuffle=True,
-                                                buffer_n_steps=train_steps_per_epoch,
+                                                buffer_n_batches=self.train_dict['buffer_n_batches_train'],
                                                 repeat_count=None,
                                                 drop_remainder=True)
 
-        eval_set = evalset_provider.make_batch(tfr_file_list=self.train_dict['eval_file_list'],
+        eval_set = dataset_provider.make_batch(tfr_file_list=self.train_dict['eval_file_list'],
                                                batch_size=self.train_dict['eval_batch_size'],
                                                shuffle=False,
-                                               buffer_n_steps=None,
+                                               buffer_n_batches=None,
                                                repeat_count=1,
-                                               drop_remainder=True)
-        # All labels from validation set
-        labels = []
-        for n_steps, batch in enumerate(eval_set):
-            labels.extend(batch[1]['score_output'].numpy())
-
-        callback_list = self.create_callbacks()
-        callback_list.append(Validate(eval_set, labels, n_steps))
-
-        # File writer for custom metrics
-        file_writer = tf.summary.create_file_writer(self.log_dir+'/metrics')
-        file_writer.set_as_default()
+                                               drop_remainder=False)
 
         hist = model.fit(x=train_set,
                          epochs=self.train_dict['n_epochs'],
@@ -155,7 +114,7 @@ class VideoTrainer:
                          steps_per_epoch=train_steps_per_epoch,
                          validation_steps=self.train_dict['validation_batches'],
                          validation_freq=self.train_dict['validation_freq'],
-                         callbacks=callback_list)
+                         callbacks=self.create_callbacks())
 
         # After fit, save the model and weights
         model.save(os.path.join(self.log_dir, self.model_dict['name'] + '.h5'))

@@ -104,15 +104,15 @@ class DatasetProvider:
                  cfr_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
-                 im_scale_factor=None,
                  augment=False,
+                 im_scale_factor=None,
                  model_output='cfr'):
 
         self.cfr_boundaries = cfr_boundaries
         self.output_height = output_height
         self.output_width = output_width
-        self.im_scale_factor = im_scale_factor
         self.augment = augment
+        self.im_scale_factor = im_scale_factor
         self.model_output = model_output
 
     @tf.function
@@ -225,7 +225,7 @@ class DatasetProvider:
         return (video_output, score_output)
 
     def make_batch(self, tfr_file_list, batch_size, shuffle,
-                   buffer_n_batches=100, repeat_count=1, drop_remainder=False):
+                   buffer_n_steps=100, repeat_count=1, drop_remainder=False):
 
         # Shuffle data
         if shuffle:
@@ -235,11 +235,11 @@ class DatasetProvider:
             files = tf.data.Dataset.list_files(tfr_file_list, shuffle = True)
 
             dataset = files.interleave(tf.data.TFRecordDataset,
-                                       cycle_length = len(tfr_file_list),
-                                       num_parallel_calls = tf.data.experimental.AUTOTUNE)
+                                       cycle_length=len(tfr_file_list),
+                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-            dataset = dataset.shuffle(buffer_size = buffer_n_batches * batch_size,
-                                      reshuffle_each_iteration = True)
+            dataset = dataset.shuffle(buffer_size=buffer_n_steps * batch_size,
+                                      reshuffle_each_iteration=True)
 
         else:
             dataset = tf.data.TFRecordDataset(tfr_file_list)

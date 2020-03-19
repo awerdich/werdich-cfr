@@ -5,12 +5,31 @@ import pickle
 import tensorflow as tf
 
 # Custom imports
-from werdich_cfr.tfutils.ModeltrainerInc2 import VideoTrainer
-from werdich_cfr.tfutils.tfutils import use_gpu_devices
+from werdich_cfr.tfutils.ModeltrainerInc1 import VideoTrainer
 
 #%% GPU CONFIGURATION
+# GPU
+use_device_string = '0,1'
+use_device_idx = list(range(len(use_device_string.split(','))))
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='4,5,6,7')
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = use_device_string
+
+physical_devices = tf.config.list_physical_devices('GPU')
+device_list = [physical_devices[idx].name.replace('physical_device:', '') for idx in use_device_idx]
+
+print('AVAILABLE GPUs:')
+print(*physical_devices, sep='\n')
+print('TRAIN DEVICE LIST:')
+print(*device_list, sep='\n')
+
+try:
+  for dev in physical_devices:
+    tf.config.experimental.set_memory_growth(dev, True)
+except:
+  # Invalid device or cannot modify virtual devices once initialized.
+  pass
+
 
 #%% Some support functions
 
@@ -23,21 +42,15 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200304'
-model_name = 'inc2_cfr_'+'0319dgx1'
-#model_name = 'test_inc2'
+model_name = 'cfr'+cfr_meta_date+'gpu4'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date)
 train_files = sorted(glob.glob(os.path.join(tfr_data_dir, 'cfr_resized75_a4c_train_'+cfr_meta_date+'_*.tfrecords')))
 eval_files = sorted(glob.glob(os.path.join(tfr_data_dir, 'cfr_resized75_a4c_eval_'+cfr_meta_date+'_*.tfrecords')))
 
-#  ----- TESTING
-# train_files = [eval_files[0]]
-# eval_files = [eval_files[1]]
-
 print('TRAIN:')
 print(*train_files, sep='\n')
-print('EVAL:')
 print(*eval_files, sep='\n')
 
 # Model parameters
@@ -46,27 +59,22 @@ model_dict = {'name': model_name,
               'im_scale_factor': 1.177,
               'n_frames': 40,
               'filters': 64,
-              'fc_nodes': 1,
-              'model_output': 'cfr',
+              'fc_nodes': 128,
               'kernel_init': tf.keras.initializers.GlorotNormal(),
               'bias_init': tf.keras.initializers.Zeros()}
-
-print('model_output: {}'.format(model_dict['model_output']))
 
 # Training parameters
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
-              'augment': False,
-              'train_batch_size': 32,
-              'eval_batch_size': 32,
+              'train_batch_size': 20,
+              'eval_batch_size': 20,
               'validation_batches': None,
               'validation_freq': 1,
-              'n_epochs': 150,
+              'n_epochs': 100,
               'verbose': 1,
+              'buffer_n_batches_train': 8,
               'train_file_list': train_files,
               'eval_file_list': eval_files}
-
-#%% Save model parameters
 
 # Save model parameters before training
 # Create the log dir, if it does not exist
@@ -79,7 +87,7 @@ write_model_dict(train_dict, train_dict_file)
 
 # Compile the model
 VT = VideoTrainer(log_dir=log_dir, model_dict=model_dict, train_dict=train_dict)
-model=VT.compile_inc2model()
+model=VT.compile_inc1model()
 model.summary()
 
 # Run the training and save the history data
