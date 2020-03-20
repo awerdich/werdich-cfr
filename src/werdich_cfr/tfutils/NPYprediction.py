@@ -1,11 +1,16 @@
 """
-Model predictions from checkpoint file
+Model predictions on .npy.lzy video files
 """
 
 import os
 import glob
 import pickle
 import pandas as pd
+
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 20)
+pd.set_option('display.width', 1000)
+
 import tensorflow as tf
 from scipy.stats import spearmanr
 from tensorflow.keras.models import load_model
@@ -17,16 +22,43 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 # Directories and files
-tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200304')
-log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/meta200304_restmbf_0311gpu2')
+meta_date = '200304'
+cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
+log_dir = os.path.join(cfr_data_root, 'log', 'meta200304_restmbf_0311gpu2')
 model_name = 'meta200304_restmbf_0311gpu2'
-#model_name = os.path.basename(log_dir)
 checkpoint_file = os.path.join(log_dir, 'meta200304_restmbf_0311gpu2_chkpt_150.h5')
 
 # We need the model_dict for the correct image transformations
 model_dict_file = os.path.join(log_dir, model_name+'_model_dict.pkl')
 with open(model_dict_file, 'rb') as fl:
     model_dict = pickle.load(fl)
+
+
+#%% Datasets
+# Our test set
+testset_predicted_file = os.path.join(log_dir, 'cfr_resized75_a4c_test_200304.parquet')
+tdf_original = pd.read_parquet(testset_predicted_file)
+tdf_label = tdf_original[['study', 'filename', 'dir', 'rest_mbf_unaff', 'label', 'pred']]
+
+# Filenames for prediction
+file_list = list(tdf_label.filename)
+file_df = pd.DataFrame({'filename': file_list})
+
+# Get BWH metadata
+meta_filename = 'echo_BWH_meta_cfr_'+meta_date+'.parquet'
+meta_file = os.path.join(meta_dir, meta_filename)
+meta_df = pd.read_parquet(meta_file)
+print(f'Loaded meta data with {meta_df.shape[0]} rows.')
+file_df = file_df.merge(right=meta_df, how='left', on='filename')
+
+# Preprocessing step 1: PRE-TFR
+
+
+
+#%%
+
+
 
 tfr_file_list = sorted(glob.glob(os.path.join(tfr_dir, 'cfr_resized75_a4c_test_200304_*.tfrecords')))
 parquet_file_list = [file.replace('.tfrecords', '.parquet') for file in tfr_file_list]
