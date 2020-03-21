@@ -16,6 +16,9 @@ meta_date = '200320'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
 
+# Output file
+meta_filename = 'echo_BWH_meta_cfr_'+meta_date+'.parquet'
+
 #%% Load the file names
 file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
 
@@ -85,7 +88,6 @@ df_meta_list = [] # Collect filenames with meta data
 df_missing_meta_list = [] # Collect studies with missing meta data
 
 study_list = sorted(list(file_df2.study.unique()))
-meta_filename = 'echo_BWH_meta_cfr_'+meta_date+'.parquet'
 meta_missing_filename = meta_filename.split('.')[0]+'_missing.parquet'
 
 start_time = time.time()

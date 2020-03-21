@@ -1,13 +1,20 @@
+
+import os
 import numpy as np
 import cv2
 import lz4.frame
 
-class Echoproc:
-    """ Preprocessing functions for echo videos """
-
-    def __init__(self, min_rate, min_frames):
+class Videoconverter:
+    """ Preprocessing functions for echo videos
+    min_rate: minimum frame rate
+    min_frames: minimum required number of frames
+    meta_df: data frame from collect_metadata script
+    """
+    def __init__(self, min_rate, min_frames, meta_df):
         self.min_rate = min_rate
         self.min_frames = min_frames
+        self.meta_df = meta_df
+        self.min_video_len = min_frames / min_rate
 
     def im_scale(self, im, dx, dy):
         """ convert single images to uint8 and resize by scale factors """
@@ -46,47 +53,54 @@ class Echoproc:
 
         return time_index_list
 
-    def subsample_video(self, image_array, frame_time, min_rate, min_frames):
+    def subsample_video(self, image_array, frame_time):
         """
         Select frames that are closest to a constant frame rate
         arg: image_array: np.array() [rows, columns, frame]
         """
-        convert_video = True
         rate = 1 / frame_time
         # Check if the video is long enough
-        min_video_len = min_frames / min_rate
         video_len = image_array.shape[-1] / rate
-        if (min_video_len <= video_len) & (min_rate < rate):
+        subsampled_image_array = np.zeros(1)
+
+        if (self.min_video_len < video_len) & (self.min_rate < rate):
             # print('Video is long enough and the rate is good.')
             # Get the frame index list
             time_index_list = self.subsample_time_index_list(frame_time=frame_time,
-                                                        default_rate=min_rate,
-                                                        n_frames=min_frames)
-            # Select the frames from the video
-            image_array = image_array[:, :, time_index_list]
+                                                             default_rate=self.min_rate,
+                                                             n_frames=self.min_frames)
+            # Subsample video: skip frames by time index
+            subsampled_image_array = image_array[:, :, time_index_list]
+
+        return subsampled_image_array
+
+    def process_video(self, filename):
+        meta = self.meta_df[self.meta_df.filename == filename]
+        output_array = np.zeros(1)
+        if meta.shape[0] > 0:
+            frame_time = meta.frame_time.values[0] * 1e-3
+            rate = 1 / frame_time
+            dx = meta.deltaX.values[0]
+            dy = meta.deltaY.values[0]
+            file = os.path.join(meta.dir.values[0], filename)
+            try:
+                with lz4.frame.open(file, 'rb') as fp:
+                    data = np.load(fp)
+            except IOError as err:
+                print(err)
+            else:
+                video_len = data.shape[0] / rate
+                # If the rate is higher, we need more frames
+                if (self.min_video_len < video_len) & (self.min_rate < rate):
+                    image_array = self.data2imarray(im_data=data, dx=dx, dy=dy)
+                    output_array = self.subsample_video(image_array=image_array,
+                                                        frame_time=frame_time)
+                else:
+                    if self.min_rate >= rate:
+                        print('Frame rate is too low: {} /s. Skipping.'.format(rate))
+                    if self.min_video_len >= video_len:
+                        print('Video is too short: {} s. Skipping'.format(video_len))
         else:
-            convert_video = False
+            print('No meta data for {}. Skipping'.format(filename))
 
-        return convert_video, image_array
-
-    def load_video(self, ser):
-        """ Load video into memory from metadata in dataframe
-        ser.filename
-        ser.dir
-        """
-
-        file = os.path.join(ser.dir, filename)
-
-        try:
-            with lz4.frame.open(file, 'rb') as fp:
-                data = np.load(fp)
-
-        except IOError as err:
-            print('Could not open this file: {}\n {}'.format(file, err))
-        else:
-            im_array_original = self.data2imarray(data, dx=ser.deltaX, dy=ser.deltaY)
-            frame_time = ser.frame_time * 1e-3
-            convert_video, im_array = subsample_video(image_array=im_array_original,
-                                                      frame_time=frame_time,
-                                                      min_rate=min_rate,
-                                                      min_frames=min_frames)
+        return output_array
