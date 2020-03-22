@@ -48,15 +48,15 @@ def predict_from_array_list(array_list):
     return predict_list
 
 #%% Select GPU device
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
-batch_size = 16
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
+batch_size = 32
 # Maximum number of files to load into memory at a time
 n_files_in_mem = 1000
 
 # Model
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-log_dir = os.path.join(cfr_dir, 'log', 'meta200304_restmbf_0311gpu2')
-model_name = 'meta200304_restmbf_0311gpu2'
+log_dir = os.path.join(cfr_dir, 'log', 'inc2_cfr_0319dgx1')
+model_name = 'inc2_cfr_0319dgx1'
 checkpoint_file = os.path.join(log_dir, model_name+'_chkpt_150.h5')
 print('Loading model from checkpoint {}.'.format(os.path.basename(checkpoint_file)))
 model = load_model(checkpoint_file)

@@ -78,29 +78,31 @@ class Videoconverter:
         meta = self.meta_df[self.meta_df.filename == filename]
         output_array = np.zeros(1)
         if meta.shape[0] > 0:
-            frame_time = meta.frame_time.values[0] * 1e-3
-            rate = 1 / frame_time
-            dx = meta.deltaX.values[0]
-            dy = meta.deltaY.values[0]
-            file = os.path.join(meta.dir.values[0], filename)
-            try:
-                with lz4.frame.open(file, 'rb') as fp:
-                    data = np.load(fp)
-            except IOError as err:
-                print(err)
-            else:
-                video_len = data.shape[0] / rate
-                # If the rate is higher, we need more frames
-                if (self.min_video_len < video_len) & (self.min_rate < rate):
-                    image_array = self.data2imarray(im_data=data, dx=dx, dy=dy)
-                    output_array = self.subsample_video(image_array=image_array,
-                                                        frame_time=frame_time)
+            deltaX = meta.deltaX.values[0]
+            deltaY = meta.deltaY.values[0]
+            if (0 < deltaX) & (deltaX < 1) & (0 < deltaY) & (deltaY < 1):
+                frame_time = meta.frame_time.values[0] * 1e-3
+                rate = 1 / frame_time
+                file = os.path.join(meta.dir.values[0], filename)
+                try:
+                    with lz4.frame.open(file, 'rb') as fp:
+                        data = np.load(fp)
+                except IOError as err:
+                    print(err)
                 else:
-                    if self.min_rate >= rate:
-                        print('Frame rate is too low: {} /s. Skipping.'.format(rate))
-                    if self.min_video_len >= video_len:
-                        print('Video is too short: {} s. Skipping'.format(video_len))
+                    video_len = data.shape[0] / rate
+                    # If the rate is higher, we need more frames
+                    if (self.min_video_len < video_len) & (self.min_rate < rate):
+                        image_array = self.data2imarray(im_data=data, dx=deltaX, dy=deltaY)
+                        output_array = self.subsample_video(image_array=image_array,
+                                                            frame_time=frame_time)
+                    else:
+                        if self.min_rate >= rate:
+                            print('Frame rate is too low: {} /s. Skipping.'.format(rate))
+                        if self.min_video_len >= video_len:
+                            print('Video is too short: {} s. Skipping'.format(video_len))
+            else:
+                print('Meta data invalid for {}. Skipping'.format(filename))
         else:
             print('No meta data for {}. Skipping'.format(filename))
-
         return output_array
