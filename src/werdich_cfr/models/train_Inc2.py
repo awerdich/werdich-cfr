@@ -44,6 +44,7 @@ print(*eval_files, sep='\n')
 model_dict = {'name': model_name,
               'im_size': (299, 299, 1),
               'im_scale_factor': 1.177,
+              'min_rate': 21,
               'n_frames': 40,
               'filters': 64,
               'fc_nodes': 1,

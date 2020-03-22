@@ -20,7 +20,6 @@ physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200304')
 log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/meta200304_restmbf_0311gpu2')
 model_name = 'meta200304_restmbf_0311gpu2'
-#model_name = os.path.basename(log_dir)
 checkpoint_file = os.path.join(log_dir, 'meta200304_restmbf_0311gpu2_chkpt_150.h5')
 
 # We need the model_dict for the correct image transformations
