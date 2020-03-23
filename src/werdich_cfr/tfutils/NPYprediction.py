@@ -120,13 +120,19 @@ for c, file_list_c in enumerate(file_chunks):
         pred_df_list.append(pred_df_c)
 
 #%% Concat output predictions and save data
-save_name = os.path.basename(video_list_file).strip('.')+'_pred_'+model_output+'.parquet'
 save_dir = os.path.dirname(video_list_file)
+save_name = os.path.basename(video_list_file).split('.')[0]+'_pred_'+model_output+'.parquet'
 pred_df = pd.concat(pred_df_list, axis=0, ignore_index=True).reset_index(drop=True)
 pred_df.to_parquet(os.path.join(save_dir, save_name))
 # Load result
 #save_name = 'test.txt_pred_rest_mbf.parquet'
 #save_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 #pred_df = pd.read_parquet(os.path.join(save_dir, save_name))
+
+#%% Check the results
+pred_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/predictions')
+cfr_df = pd.read_parquet(os.path.join(pred_dir, 'a4cname_pred_cfr.parquet'))
+mbf_df = pd.read_parquet(os.path.join(pred_dir, 'a4cname_pred_rest_mbf.parquet'))
+
 
 

@@ -120,7 +120,7 @@ for c, file_list_c in enumerate(file_chunks):
         pred_df_list.append(pred_df_c)
 
 #%% Concat output predictions and save data
-save_name = os.path.basename(video_list_file).strip('.')+'_pred_'+model_output+'.parquet'
+save_name = os.path.basename(video_list_file).split('.')[0]+'_pred_'+model_output+'.parquet'
 save_dir = os.path.dirname(video_list_file)
 pred_df = pd.concat(pred_df_list, axis=0, ignore_index=True).reset_index(drop=True)
 pred_df.to_parquet(os.path.join(save_dir, save_name))
