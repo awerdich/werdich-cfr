@@ -18,9 +18,9 @@ physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 # Directories and files
 tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200304')
-log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/meta200304_restmbf_0311gpu2')
-model_name = 'meta200304_restmbf_0311gpu2'
-checkpoint_file = os.path.join(log_dir, 'meta200304_restmbf_0311gpu2_chkpt_150.h5')
+log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/inc2_cfr_0319dgx1')
+model_name = 'inc2_cfr_0319dgx1'
+checkpoint_file = os.path.join(log_dir, 'inc2_cfr_0319dgx1_chkpt_150.h5')
 
 # We need the model_dict for the correct image transformations
 model_dict_file = os.path.join(log_dir, model_name+'_model_dict.pkl')
