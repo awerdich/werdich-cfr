@@ -128,5 +128,3 @@ pred_df.to_parquet(os.path.join(save_dir, save_name))
 #save_name = 'test.txt_pred_rest_mbf.parquet'
 #save_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 #pred_df = pd.read_parquet(os.path.join(save_dir, save_name))
-
-
