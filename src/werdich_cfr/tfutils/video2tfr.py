@@ -14,11 +14,11 @@ from werdich_cfr.utils.processing import Videoconverter
 
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200320'
+meta_date = '200425'
 # Additional information for filename
-tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date)
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-cfr_meta_file = 'tfr_files_dset_BWH_'+meta_date+'.parquet'
+cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
+tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, 'global')
 meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
 #max_samples_per_file = 2000
