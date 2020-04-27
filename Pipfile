@@ -4,23 +4,18 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+jupyterlab = "*"
+matplotlib = "*"
+ipywidgets = "*"
 
 [packages]
 werdich-cfr = {editable = true,path = "."}
-pandas = "*"
-pyarrow = "*"
-scikit-learn = "*"
-python-dotenv = "*"
-jupyterlab = "*"
-xlrd = "*"
-ipywidgets = "*"
-pycrypto = "*"
+tensorrt = {path = "/home/andreas/TensorRT-6.0.1.5/python/tensorrt-6.0.1.5-cp37-none-linux_x86_64.whl"}
+uff = {path = "/home/andreas/TensorRT-6.0.1.5/uff/uff-0.6.5-py2.py3-none-any.whl"}
+graphsurgeon = {path = "/home/andreas/TensorRT-6.0.1.5/graphsurgeon/graphsurgeon-0.4.1-py2.py3-none-any.whl"}
 lz4 = "*"
-numpy = "*"
-seaborn = "*"
-matplotlib = "*"
+pycrypto = "*"
 opencv-python = "*"
-bokeh = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
