@@ -21,6 +21,9 @@ cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, 'global')
 meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
+# Variable names
+var_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
+
 #max_samples_per_file = 2000
 n_tfr_files = 8 # We should have one TFR file per GPU
 
