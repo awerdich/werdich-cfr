@@ -23,6 +23,9 @@ meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
 # Variable names
 var_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
+array_data_dict = {'image': []}
+float_data_dict = {name: [] for name in var_list}
+int_data_dict = {'record': []}
 
 #max_samples_per_file = 2000
 n_tfr_files = 8 # We should have one TFR file per GPU
@@ -74,6 +77,7 @@ for mode in meta_df['mode'].unique():
         print()
         print('Processing {} part {} of {}'.format(tfr_filename, part + 1, len(file_list_parts)))
 
+
         im_array_list = [] # list of image arrays [row, col, frame]
         im_array_ser_list = [] # list of pd.Series object for the files in im_array_list
         im_failed_ser_list = [] # list of pd.Series objects for failed videos
@@ -93,6 +97,9 @@ for mode in meta_df['mode'].unique():
             im_array = vc.process_video(filename)
 
             if np.any(im_array):
+                # Data dictionaries
+
+
                 im_array_list.append(im_array)
                 cfr_list.append(ser.unaffected_cfr)
                 rest_mbf_list.append(ser.rest_mbf_unaff)
