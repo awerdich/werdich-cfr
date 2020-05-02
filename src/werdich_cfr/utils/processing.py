@@ -88,6 +88,7 @@ class Videoconverter:
                     with lz4.frame.open(file, 'rb') as fp:
                         data = np.load(fp)
                 except IOError as err:
+                    print('Cannot open npy file.')
                     print(err)
                 else:
                     video_len = data.shape[0] / rate
@@ -98,9 +99,9 @@ class Videoconverter:
                                                             frame_time=frame_time)
                     else:
                         if self.min_rate >= rate:
-                            print('Frame rate is too low: {} /s. Skipping.'.format(rate))
+                            print(f'Frame rate is too low: {rate:.2f}s^-1. Skipping.')
                         if self.min_video_len >= video_len:
-                            print('Video is too short: {} s. Skipping'.format(video_len))
+                            print(f'Video is too short: {video_len:.2f}s. Skipping.')
             else:
                 print('Meta data invalid for {}. Skipping'.format(filename))
         else:

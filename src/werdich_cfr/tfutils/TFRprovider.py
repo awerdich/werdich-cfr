@@ -23,37 +23,40 @@ class Dset:
     def __init__(self, data_root):
         self.data_root = data_root
 
-    def create_tfr(self, filename, image_data, cfr_data,
-                   rest_mbf_data, stress_mbf_data, record_data):
-        ''' Build a TFRecoreds data set from numpy arrays'''
+    def create_tfr(self, filename, array_data_dict, float_data_dict, int_data_dict):
+        ''' Build a TFRecoreds data set from data dictionaries
+        data_dict: 'name': list of type array, float or int
+        All lists must be the same length
+        '''
 
         file = os.path.join(self.data_root, filename)
 
         with tf.io.TFRecordWriter(file) as writer:
 
             print('Converting:', filename)
-            n_images = len(image_data)
+            n_images = len(array_data_dict['image'])
 
             for i in range(n_images):
 
                 # Print the percentage-progress.
-                self._print_progress(count = i, total = n_images-1)
+                self._print_progress(count=i, total=n_images-1)
 
-                im_bytes = image_data[i].astype(np.uint16).tobytes()
-                im_shape_bytes = np.array(image_data[i].shape).astype(np.uint16).tobytes()
-                cfr = cfr_data[i]
-                rest_mbf = rest_mbf_data[i]
-                stress_mbf = stress_mbf_data[i]
-                idx = record_data[i]
+                feature_dict = {}
+
+                im_bytes = array_data_dict['image'][i].astype(np.uint16).tobytes()
+                im_shape_bytes = np.array(array_data_dict['image'][i].shape).astype(np.uint16).tobytes()
+                array_features = {'image': self._wrap_bytes(im_bytes),
+                                  'shape': self._wrap_bytes(im_shape_bytes)}
+                feature_dict.update(array_features)
+
+                float_features = {key: self._wrap_float(float_data_dict[key][i]) for key in float_data_dict.keys()}
+                feature_dict.update(float_features)
+
+                int_features = {key: self._wrap_int64(int_data_dict[key][i]) for key in int_data_dict.keys()}
+                feature_dict.update(int_features)
 
                 # Build example
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'image': self._wrap_bytes(im_bytes),
-                    'shape': self._wrap_bytes(im_shape_bytes),
-                    'cfr': self._wrap_float(cfr),
-                    'rest_mbf': self._wrap_float(rest_mbf),
-                    'stress_mbf': self._wrap_float(stress_mbf),
-                    'record': self._wrap_int64(idx)}))
+                example = tf.train.Example(features=tf.train.Features(feature={feature_dict}))
 
                 # Serialize example
                 serialized = example.SerializeToString()
