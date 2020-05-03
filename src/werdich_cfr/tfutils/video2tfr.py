@@ -22,12 +22,12 @@ cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200425'
 # Additional information for filename
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
-tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, 'global')
+cfr_meta_file = 'nondefect_pet_echo_dataset_'+meta_date+'.parquet'
+tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, 'nondefect')
 meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
 # Initialize data dictionaries
-float_label_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
+float_label_list = ['rest_mbf_unaff', 'stress_mbf_unaff', 'unaffected_cfr']
 
 # We cannot insert NAs into the label lists.
 # Drop rows with NAs in the label columns
@@ -52,7 +52,7 @@ def chunks(l, n):
 #%% Select one view and process files
 
 view = 'a4c'
-tfr_info = 'global'
+tfr_info = 'nondefect'
 
 for mode in meta_df['mode'].unique():
 
