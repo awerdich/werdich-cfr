@@ -11,6 +11,11 @@ pd.set_option('display.width', 1000)
 # Custom import
 from werdich_cfr.tfutils.TFRprovider import Dset
 from werdich_cfr.utils.processing import Videoconverter
+from werdich_cfr.tfutils.tfutils import use_gpu_devices
+
+#%% Select GPUs
+
+physical_devices, device_list = use_gpu_devices(gpu_device_string='1,2,3')
 
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')

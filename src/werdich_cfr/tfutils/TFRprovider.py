@@ -20,7 +20,7 @@ from tensorflow.keras.applications.inception_v3 import preprocess_input as prepr
 
 class Dset:
 
-    def __init__(self, data_root):
+    def __init__(self, data_root, gpu_device_string='0'):
         self.data_root = data_root
 
     def create_tfr(self, filename, array_data_dict, float_data_dict, int_data_dict):
@@ -56,7 +56,7 @@ class Dset:
                 feature_dict.update(int_features)
 
                 # Build example
-                example = tf.train.Example(features=tf.train.Features(feature={feature_dict}))
+                example = tf.train.Example(features=tf.train.Features(feature=feature_dict))
 
                 # Serialize example
                 serialized = example.SerializeToString()

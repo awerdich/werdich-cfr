@@ -10,7 +10,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='4,5,6,7')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='1,2,3')
 
 #%% Some support functions
 
