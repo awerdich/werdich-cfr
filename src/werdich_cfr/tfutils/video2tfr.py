@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pickle
 import lz4.frame
 import cv2
 import pandas as pd
@@ -17,6 +18,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 physical_devices, device_list = use_gpu_devices(gpu_device_string='1,2,3')
 
+
 #%% files and directories
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200425'
@@ -26,7 +28,7 @@ cfr_meta_file = 'nondefect_pet_echo_dataset_'+meta_date+'.parquet'
 tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, 'nondefect')
 meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
-# Initialize data dictionaries
+# Labels to be exported
 float_label_list = ['rest_mbf_unaff', 'stress_mbf_unaff', 'unaffected_cfr']
 
 # We cannot insert NAs into the label lists.
@@ -52,7 +54,7 @@ def chunks(l, n):
 #%% Select one view and process files
 
 view = 'a4c'
-tfr_info = 'nondefect'
+tfr_info = 'unaffected'
 
 for mode in meta_df['mode'].unique():
 
@@ -105,7 +107,6 @@ for mode in meta_df['mode'].unique():
             im_array = vc.process_video(filename)
 
             if np.any(im_array):
-
                 # Data dictionaries
                 array_data_dict['image'].append(im_array)
                 for label in float_label_list:
@@ -115,7 +116,6 @@ for mode in meta_df['mode'].unique():
                 ser_df2 = ser_df.assign(im_array_shape=[list(im_array.shape)])
                 im_array_ser_list.append(ser_df2)
             else:
-                #print('Could not open this file: {}. Skipping'.format(filename))
                 im_failed_ser_list.append(ser_df)
 
         # Write TFR file
@@ -126,6 +126,21 @@ for mode in meta_df['mode'].unique():
                                  array_data_dict=array_data_dict,
                                  float_data_dict=float_data_dict,
                                  int_data_dict=int_data_dict)
+
+            # Save feature names (needed for parsing the tfrechords files)
+            array_list = list(array_data_dict.keys())
+            array_list.append('shape')
+            feature_dict = {'array': array_list,
+                            'float': list(float_data_dict.keys()),
+                            'int': list(int_data_dict.keys()),
+                            'features': list(TFR_saver.feature_dict.keys())}
+            feature_dict_file_name = os.path.splitext(cfr_meta_file)[0]+'.pkl'
+            feature_dict_file = os.path.join(tfr_dir, feature_dict_file_name)
+
+            # Save the feature. We need them to decode the data.
+            if not os.path.exists(feature_dict_file):
+                with open(feature_dict_file, 'wb') as fs:
+                    pickle.dump(feature_dict, fs)
 
             # When this is done, save the parquet file
             im_array_df = pd.concat(im_array_ser_list)

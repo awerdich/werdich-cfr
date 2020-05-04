@@ -20,7 +20,7 @@ from tensorflow.keras.applications.inception_v3 import preprocess_input as prepr
 
 class Dset:
 
-    def __init__(self, data_root, gpu_device_string='0'):
+    def __init__(self, data_root):
         self.data_root = data_root
 
     def create_tfr(self, filename, array_data_dict, float_data_dict, int_data_dict):
@@ -41,22 +41,22 @@ class Dset:
                 # Print the percentage-progress.
                 self._print_progress(count=i, total=n_images-1)
 
-                feature_dict = {}
+                self.feature_dict = {}
 
                 im_bytes = array_data_dict['image'][i].astype(np.uint16).tobytes()
                 im_shape_bytes = np.array(array_data_dict['image'][i].shape).astype(np.uint16).tobytes()
                 array_features = {'image': self._wrap_bytes(im_bytes),
                                   'shape': self._wrap_bytes(im_shape_bytes)}
-                feature_dict.update(array_features)
+                self.feature_dict.update(array_features)
 
                 float_features = {key: self._wrap_float(float_data_dict[key][i]) for key in float_data_dict.keys()}
-                feature_dict.update(float_features)
+                self.feature_dict.update(float_features)
 
                 int_features = {key: self._wrap_int64(int_data_dict[key][i]) for key in int_data_dict.keys()}
-                feature_dict.update(int_features)
+                self.feature_dict.update(int_features)
 
                 # Build example
-                example = tf.train.Example(features=tf.train.Features(feature=feature_dict))
+                example = tf.train.Example(features=tf.train.Features(feature=self.feature_dict))
 
                 # Serialize example
                 serialized = example.SerializeToString()
@@ -104,14 +104,21 @@ class DatasetProvider:
     ''' Creates a dataset from a list of .tfrecords files.'''
 
     def __init__(self,
-                 cfr_boundaries=(1.232, 1.556, 2.05),
+                 feature_dict=None,
+                 class_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
                  augment=False,
                  im_scale_factor=None,
-                 model_output='cfr'):
+                 model_output=None):
 
-        self.cfr_boundaries = cfr_boundaries
+        if feature_dict is None:
+            feature_dict = {'array': ['image', 'shape'],
+                            'float': ['cfr', 'rest_mbf', 'stress_mbf'],
+                            'int': ['record']}
+
+        self.feature_dict = feature_dict
+        self.class_boundaries = class_boundaries
         self.output_height = output_height
         self.output_width = output_width
         self.augment = augment
@@ -119,9 +126,9 @@ class DatasetProvider:
         self.model_output = model_output
 
     @tf.function
-    def _cfr_label(self, cfr_value):
+    def _class_label(self, cfr_value):
         ''' classification label for cfr value '''
-        percentile_list = self.cfr_boundaries
+        percentile_list = self.class_boundaries
         label = 0
         if cfr_value < percentile_list[0]:
             label = 0
@@ -184,12 +191,16 @@ class DatasetProvider:
 
     def _parse(self, serialized):
 
-        example = {'image': tf.io.FixedLenFeature([], tf.string),
-                   'shape': tf.io.FixedLenFeature([], tf.string),
-                   'cfr': tf.io.FixedLenFeature([], tf.float32),
-                   'rest_mbf': tf.io.FixedLenFeature([], tf.float32),
-                   'stress_mbf': tf.io.FixedLenFeature([], tf.float32),
-                   'record': tf.io.FixedLenFeature([], tf.int64)}
+        example = {}
+
+        example_string = {key: tf.io.FixedLenFeature([], tf.string) for key in self.feature_dict['array']}
+        example.update(example_string)
+
+        example_float = {key: tf.io.FixedLenFeature([], tf.float32) for key in self.feature_dict['float']}
+        example.update(example_float)
+
+        example_int = {key: tf.io.FixedLenFeature([], tf.int64) for key in self.feature_dict['int']}
+        example.update(example_int)
 
         # Extract example from the data record
         example = tf.io.parse_single_example(serialized, example)
@@ -200,31 +211,18 @@ class DatasetProvider:
         shape = tf.cast(shape, tf.int32) # tf.reshape requires int16 or int32 types
         image = tf.reshape(image_raw, shape)
 
-        # Here, we have recovered the original shape of the images.
-        # Now we need to process them.
-
-        cfr = example['cfr']
-        rest_mbf = example['rest_mbf']
-        stress_mbf = example['stress_mbf']
-        record = example['record']
-
         # Create output tuple
 
         video_output = {'video': self._process_image(image, shape)}
 
-        if self.model_output == 'cfr':
-            score_output = {'score_output': cfr}
-        elif self.model_output == 'rest_mbf':
-            score_output = {'score_output': rest_mbf}
-        elif self.model_output == 'stress_mbf':
-            score_output = {'score_output': stress_mbf}
+        # Without a model output parameter, return everything
+        if self.model_output is None:
+            score_output = {}
+            #score_output = {'class_output': self._class_label(example[self.model_output])}
+            score_output.update({key: example[key] for key in self.feature_dict['float']})
+            score_output.update({key: example[key] for key in self.feature_dict['int']})
         else:
-            # Enable all outputs for testing.
-            score_output = {'class_output': self._cfr_label(cfr),
-                            'cfr_output': cfr,
-                            'mbf_output': rest_mbf,
-                            'record': record}
-
+            score_output = {'score_output': example[self.model_output]}
         return (video_output, score_output)
 
     def make_batch(self, tfr_file_list, batch_size, shuffle,
