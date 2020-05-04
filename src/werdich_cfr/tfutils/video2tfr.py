@@ -44,6 +44,9 @@ min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = min_frames/min_rate
 max_frame_time = 1/min_rate*1e3 # Maximum frame time [ms]
 
+print(f'Copying data set {cfr_meta_file} into TFR format.')
+print(f'Saving data to {tfr_dir}.')
+
 #%% Support functions
 
 def chunks(l, n):

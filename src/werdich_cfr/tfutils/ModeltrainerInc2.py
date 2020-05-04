@@ -41,13 +41,15 @@ class Validate(Callback):
 
 class VideoTrainer:
 
-    def __init__(self, log_dir, model_dict, train_dict):
+    def __init__(self, log_dir, model_dict, train_dict, feature_dict):
         self.log_dir = log_dir
         self.model_dict = model_dict
         self.train_dict = train_dict
+        self.feature_dict = feature_dict
 
     def create_dataset_provider(self, augment):
-        dataset_provider = DatasetProvider(output_height=self.model_dict['im_size'][0],
+        dataset_provider = DatasetProvider(feature_dict=self.feature_dict,
+                                           output_height=self.model_dict['im_size'][0],
                                            output_width=self.model_dict['im_size'][1],
                                            im_scale_factor=self.model_dict['im_scale_factor'],
                                            augment=augment,
@@ -123,11 +125,11 @@ class VideoTrainer:
         evalset_provider = self.create_dataset_provider(augment=False)
 
         train_set = trainset_provider.make_batch(tfr_file_list=self.train_dict['train_file_list'],
-                                                batch_size=self.train_dict['train_batch_size'],
-                                                shuffle=True,
-                                                buffer_n_steps=train_steps_per_epoch,
-                                                repeat_count=None,
-                                                drop_remainder=True)
+                                                 batch_size=self.train_dict['train_batch_size'],
+                                                 shuffle=True,
+                                                 buffer_n_steps=train_steps_per_epoch,
+                                                 repeat_count=None,
+                                                 drop_remainder=True)
 
         eval_set = evalset_provider.make_batch(tfr_file_list=self.train_dict['eval_file_list'],
                                                batch_size=self.train_dict['eval_batch_size'],
@@ -137,6 +139,7 @@ class VideoTrainer:
                                                drop_remainder=True)
         # All labels from validation set
         labels = []
+        n_steps = 0
         for n_steps, batch in enumerate(eval_set):
             labels.extend(batch[1]['score_output'].numpy())
 
