@@ -10,7 +10,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
 
 #%% Some support functions
 
@@ -23,7 +23,7 @@ def write_model_dict(model_dict, file):
 
 # Model name
 cfr_meta_date = '200425'
-model_name = 'rest_global_'+'0503gpu2'
+model_name = 'rest_global_'+'0503dgx1'
 #model_name = 'test_inc2'
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 log_dir = os.path.join(cfr_dir, 'log', model_name)
@@ -63,8 +63,8 @@ print('model_output: {}'.format(model_dict['model_output']))
 train_dict = {'train_device_list': device_list,
               'learning_rate': 0.0001,
               'augment': False,
-              'train_batch_size': 16,
-              'eval_batch_size': 16,
+              'train_batch_size': 64,
+              'eval_batch_size': 64,
               'validation_batches': None,
               'validation_freq': 1,
               'n_epochs': 150,
