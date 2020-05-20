@@ -12,7 +12,7 @@ pd.set_option('display.width', 1000)
 
 #%% Files, directories and parameters
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200425'
+meta_date = '200519'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
 dcm_echo_dir = os.path.normpath('/mnt/obi0/phi/echo/deIdentifyedEcho/BWH')
