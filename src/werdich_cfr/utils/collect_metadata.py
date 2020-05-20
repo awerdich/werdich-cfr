@@ -64,6 +64,12 @@ def collect_meta_study(df, study):
     # Skip the whole extraction if there is no video metadata or view prediction
     mdf_video = get_metadata(df_file = df, study = study, metacol = 'video_metadata_withScale')
     mdf_view = get_metadata(df_file = df, study = study, metacol = 'viewPredictionsVideo_withRV')
+    mdf_view_empty = mdf_view.loc[mdf_view['index'].isnull()]
+    if mdf_view_empty.shape[0]>0:
+        print(mdf_view_empty)
+    # Drop mdf_view if index is empty
+    mdf_view = mdf_view.dropna(subset = ['index']).reset_index(drop=True)
+    mdf_video = mdf_video.dropna(subset = ['identifier']).reset_index(drop=True)
 
     if (mdf_video.shape[0]>0) & (mdf_view.shape[0]>0):
 
@@ -73,6 +79,7 @@ def collect_meta_study(df, study):
         df_meta_study = df_meta_study.merge(right = mdf_video, on = 'fileid', how = 'left').reset_index(drop = True)
 
         # Add view predictions
+        import pdb;pdb.set_trace()
         mdf_view = mdf_view.assign(fileid = mdf_view['index'].apply(lambda f: f.split('.')[0])).\
             drop(columns = ['index'])
         df_meta_study = df_meta_study.merge(right = mdf_view, on = 'fileid', how = 'left').reset_index(drop = True)
