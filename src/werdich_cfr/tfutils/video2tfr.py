@@ -48,7 +48,7 @@ if dset == 'global':
     # Labels to be exported
     float_label_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
 
-if dset == 'nondefect':
+elif dset == 'nondefect':
 
     cfr_meta_file = 'nondefect_pet_echo_dataset_' + meta_date + '.parquet'
     tfr_dir = os.path.join(cfr_data_root, 'tfr_' + meta_date, dset)
