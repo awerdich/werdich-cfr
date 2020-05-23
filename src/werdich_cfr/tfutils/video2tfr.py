@@ -19,25 +19,12 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='1,2,3')
 
 
-#%% files and directories
+#%% files and directories and parameters for all data sets
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200519'
+
 # Additional information for filename
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
-tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, 'global')
-meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
-
-# Labels to be exported
-float_label_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
-#float_label_list = ['rest_mbf_unaff', 'stress_mbf_unaff', 'unaffected_cfr']
-
-# We cannot insert NAs into the label lists.
-# Drop rows with NAs in the label columns
-meda_df = meta_df.dropna(subset=float_label_list, how='any', axis=0)
-
-#max_samples_per_file = 2000
-n_tfr_files = 8 # We should have one TFR file per GPU
 
 # This should give us ~70% useful files
 min_rate = 21 # Minimum acceptable frame rate [fps]
@@ -45,8 +32,33 @@ min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = min_frames/min_rate
 max_frame_time = 1/min_rate*1e3 # Maximum frame time [ms]
 
-print(f'Copying data set {cfr_meta_file} into TFR format.')
-print(f'Saving data to {tfr_dir}.')
+#max_samples_per_file = 2000
+n_tfr_files = 8 # We should have one TFR file per GPU
+
+#%% Data set files
+
+dset = 'global'
+#dset = 'nondefect'
+
+if dset == 'global':
+
+    cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
+    tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, dset)
+    meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
+    # Labels to be exported
+    float_label_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
+
+if dset == 'nondefect':
+
+    cfr_meta_file = 'nondefect_pet_echo_dataset_' + meta_date + '.parquet'
+    tfr_dir = os.path.join(cfr_data_root, 'tfr_' + meta_date, dset)
+    meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
+    # Labels to be exported
+    float_label_list = ['rest_mbf_unaff', 'stress_mbf_unaff', 'unaffected_cfr']
+
+else:
+    raise NotImplementedError
+
 #%% Support functions
 
 def chunks(l, n):
@@ -55,9 +67,14 @@ def chunks(l, n):
         yield l[i:i + n]
 
 #%% Select one view and process files
+# We cannot insert NAs into the label lists.
+# Drop rows with NAs in the label columns
+meda_df = meta_df.dropna(subset=float_label_list, how='any', axis=0)
+print(f'Copying data set {cfr_meta_file} into TFR format.')
+print(f'Saving data to {tfr_dir}.')
 
 view = 'a4c'
-tfr_info = 'global'
+tfr_info = dset
 
 for mode in meta_df['mode'].unique():
 
@@ -78,7 +95,7 @@ for mode in meta_df['mode'].unique():
 
     vc = Videoconverter(min_rate=min_rate, min_frames=min_frames, meta_df=meta_df)
     # Each part will have its own TFR filename
-    for part, file_list in enumerate(file_list_parts[:2]):
+    for part, file_list in enumerate(file_list_parts):
 
         # TFR filename
         tfr_basename = 'cfr_'+tfr_info+'_'+view+'_'+mode+'_'+meta_date+'_'+str(part).zfill(mag)
@@ -96,7 +113,7 @@ for mode in meta_df['mode'].unique():
         im_array_ser_list = [] # list of pd.Series object for the files in im_array_list
         im_failed_ser_list = [] # list of pd.Series objects for failed videos
 
-        for f, filename in enumerate(file_list[:200]):
+        for f, filename in enumerate(file_list):
 
             if (f+1) % 200 == 0:
                 print('Loading video {} of {} into memory.'.format(f+1, len(file_list)))
