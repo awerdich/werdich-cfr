@@ -12,6 +12,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
+import tensorflow_addons as tfa
 from pdb import set_trace
 from tensorflow.keras.applications.inception_v3 import preprocess_input as preprocV3
 
@@ -22,32 +23,40 @@ class Dset:
     def __init__(self, data_root):
         self.data_root = data_root
 
-    def create_tfr(self, filename, image_data, cfr_data, record_data):
-        ''' Build a TFRecoreds data set from numpy arrays'''
+    def create_tfr(self, filename, array_data_dict, float_data_dict, int_data_dict):
+        ''' Build a TFRecoreds data set from data dictionaries
+        data_dict: 'name': list of type array, float or int
+        All lists must be the same length
+        '''
 
         file = os.path.join(self.data_root, filename)
 
         with tf.io.TFRecordWriter(file) as writer:
 
             print('Converting:', filename)
-            n_images = len(image_data)
+            n_images = len(array_data_dict['image'])
 
             for i in range(n_images):
 
                 # Print the percentage-progress.
-                self._print_progress(count = i, total = n_images-1)
+                self._print_progress(count=i, total=n_images-1)
 
-                im_bytes = image_data[i].astype(np.uint16).tobytes()
-                im_shape_bytes = np.array(image_data[i].shape).astype(np.uint16).tobytes()
-                cfr = cfr_data[i]
-                idx = record_data[i]
+                self.feature_dict = {}
+
+                im_bytes = array_data_dict['image'][i].astype(np.uint16).tobytes()
+                im_shape_bytes = np.array(array_data_dict['image'][i].shape).astype(np.uint16).tobytes()
+                array_features = {'image': self._wrap_bytes(im_bytes),
+                                  'shape': self._wrap_bytes(im_shape_bytes)}
+                self.feature_dict.update(array_features)
+
+                float_features = {key: self._wrap_float(float_data_dict[key][i]) for key in float_data_dict.keys()}
+                self.feature_dict.update(float_features)
+
+                int_features = {key: self._wrap_int64(int_data_dict[key][i]) for key in int_data_dict.keys()}
+                self.feature_dict.update(int_features)
 
                 # Build example
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'image': self._wrap_bytes(im_bytes),
-                    'shape': self._wrap_bytes(im_shape_bytes),
-                    'cfr': self._wrap_float(cfr),
-                    'record': self._wrap_int64(idx)}))
+                example = tf.train.Example(features=tf.train.Features(feature=self.feature_dict))
 
                 # Serialize example
                 serialized = example.SerializeToString()
@@ -95,26 +104,31 @@ class DatasetProvider:
     ''' Creates a dataset from a list of .tfrecords files.'''
 
     def __init__(self,
-                 tfr_file_list,
-                 n_frames,
-                 cfr_boundaries=(1.232, 1.556, 2.05),
+                 feature_dict=None,
+                 class_boundaries=(1.232, 1.556, 2.05),
                  output_height=299,
                  output_width=299,
+                 augment=False,
                  im_scale_factor=None,
-                 record_output=False):
+                 model_output=None):
 
-        self.tfr_file_list = tfr_file_list
-        self.n_frames = n_frames
-        self.cfr_boundaries = cfr_boundaries
+        if feature_dict is None:
+            feature_dict = {'array': ['image', 'shape'],
+                            'float': ['cfr', 'rest_mbf', 'stress_mbf'],
+                            'int': ['record']}
+
+        self.feature_dict = feature_dict
+        self.class_boundaries = class_boundaries
         self.output_height = output_height
         self.output_width = output_width
+        self.augment = augment
         self.im_scale_factor = im_scale_factor
-        self.record_output = record_output
+        self.model_output = model_output
 
     @tf.function
-    def _cfr_label(self, cfr_value):
+    def _class_label(self, cfr_value):
         ''' classification label for cfr value '''
-        percentile_list = self.cfr_boundaries
+        percentile_list = self.class_boundaries
         label = 0
         if cfr_value < percentile_list[0]:
             label = 0
@@ -124,6 +138,24 @@ class DatasetProvider:
             if (cfr_value >= percentile_list[p - 1]) & (cfr_value < percentile_list[p]):
                 label = p
         return tf.one_hot(label, depth = len(percentile_list)+1)
+
+    def augment_image(self, image):
+
+        # maximum rotation angle in degrees
+        max_ang_deg = 15
+        max_ang = np.pi / 180 * max_ang_deg
+
+        # Random rotation
+        image = tfa.image.rotate(image, tf.random.uniform(shape=[],
+                                                          minval=-max_ang, maxval=max_ang,
+                                                          dtype=tf.float32),
+                                 interpolation='NEAREST')
+
+        # Brightness, contrast
+        image = tf.image.random_brightness(image, 0.5)
+        image = tf.image.random_contrast(image, 0.7, 2.5)
+
+        return image
 
     def _process_image(self, image, shape):
 
@@ -138,7 +170,7 @@ class DatasetProvider:
                                              target_height=self.output_height,
                                              target_width=self.output_width)
         else:
-            # Re-size the image with a single scale factor, then pad to output_size
+            # Re-size the image with a single scale factor, then pad or crop to output_size
             im_size = tf.cast(tf.slice(shape, [0], [2]), dtype=tf.float32)
             new_im_size = tf.cast(tf.math.ceil(tf.math.scalar_mul(self.im_scale_factor, im_size)), tf.int32)
             image = tf.image.resize(image, size=new_im_size, antialias=True)
@@ -146,9 +178,12 @@ class DatasetProvider:
             image = tf.image.resize_with_crop_or_pad(image,
                                                      target_height=self.output_height,
                                                      target_width=self.output_width)
+        # Augment images
+        if self.augment:
+            image = self.augment_image(image)
 
         # Scale image to have mean 0 and variance 1
-        image = tf.cast(image, tf.float64)
+        image = tf.cast(image, tf.float32)
         image = tf.image.adjust_contrast(image, contrast_factor=5)
         output_image = tf.image.per_image_standardization(image)
 
@@ -156,10 +191,16 @@ class DatasetProvider:
 
     def _parse(self, serialized):
 
-        example = {'image': tf.io.FixedLenFeature([], tf.string),
-                   'shape': tf.io.FixedLenFeature([], tf.string),
-                   'cfr': tf.io.FixedLenFeature([], tf.float32),
-                   'record': tf.io.FixedLenFeature([], tf.int64)}
+        example = {}
+
+        example_string = {key: tf.io.FixedLenFeature([], tf.string) for key in self.feature_dict['array']}
+        example.update(example_string)
+
+        example_float = {key: tf.io.FixedLenFeature([], tf.float32) for key in self.feature_dict['float']}
+        example.update(example_float)
+
+        example_int = {key: tf.io.FixedLenFeature([], tf.int64) for key in self.feature_dict['int']}
+        example.update(example_int)
 
         # Extract example from the data record
         example = tf.io.parse_single_example(serialized, example)
@@ -170,48 +211,45 @@ class DatasetProvider:
         shape = tf.cast(shape, tf.int32) # tf.reshape requires int16 or int32 types
         image = tf.reshape(image_raw, shape)
 
-        # Here, we have recovered the original shape of the images.
-        # Now we need to process them.
+        # Create output tuple
 
-        cfr = example['cfr']
-        record = example['record']
+        video_output = {'video': self._process_image(image, shape)}
 
-        # categorical and regression outputs (tuple of dicts)
-        if self.record_output:
-            # Add record output for testing only (additional output gives an error during training)
-            outputs = ({'video': self._process_image(image, shape)},
-                       {'class_output': self._cfr_label(cfr),
-                        'score_output': cfr},
-                       {'record': record})
+        # Without a model output parameter, return everything
+        if self.model_output is None:
+            score_output = {}
+            #score_output = {'class_output': self._class_label(example[self.model_output])}
+            score_output.update({key: example[key] for key in self.feature_dict['float']})
+            score_output.update({key: example[key] for key in self.feature_dict['int']})
         else:
-            # For training, use only model input/outputs
-            outputs = ({'video': self._process_image(image, shape)},
-                       {'class_output': self._cfr_label(cfr),
-                        'score_output': cfr})
-        return outputs
+            score_output = {'score_output': example[self.model_output]}
+        return (video_output, score_output)
 
-    def make_batch(self, batch_size, shuffle, buffer_n_batches=100, repeat_count=1, drop_remainder=False):
+    def make_batch(self, tfr_file_list, batch_size, shuffle,
+                   buffer_n_steps=100, repeat_count=1, drop_remainder=False):
 
         # Shuffle data
         if shuffle:
 
             #n_parallel_calls = tf.data.experimental.AUTOTUNE
 
-            files = tf.data.Dataset.list_files(self.tfr_file_list, shuffle = True)
+            files = tf.data.Dataset.list_files(tfr_file_list, shuffle = True)
 
             dataset = files.interleave(tf.data.TFRecordDataset,
-                                       cycle_length = len(self.tfr_file_list),
-                                       num_parallel_calls = None)
+                                       cycle_length=len(tfr_file_list),
+                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-            dataset = dataset.shuffle(buffer_size = buffer_n_batches * batch_size,
-                                      reshuffle_each_iteration = True)
+            dataset = dataset.shuffle(buffer_size=buffer_n_steps * batch_size,
+                                      reshuffle_each_iteration=True)
 
         else:
-            dataset = tf.data.TFRecordDataset(self.tfr_file_list)
+            dataset = tf.data.TFRecordDataset(tfr_file_list)
             #n_parallel_calls = 1
 
         # Parse records
-        dataset = dataset.map(map_func=self._parse, num_parallel_calls = None)
+        dataset = dataset.map(map_func=self._parse,
+                              num_parallel_calls=tf.data.experimental.AUTOTUNE).\
+            cache().prefetch(tf.data.experimental.AUTOTUNE)
 
         # Batch it up
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)

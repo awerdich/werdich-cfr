@@ -17,7 +17,6 @@ class Convmodel:
         self.filters = model_dict['filters']
         self.fc_nodes = model_dict['fc_nodes']
         self.pool_nodes = model_dict['pool_nodes'] # Filters in the 1x1x1 convolutional pooling layer
-        self.fullnet = model_dict['fullnet']
 
     def video_encoder(self):
 
@@ -28,47 +27,45 @@ class Convmodel:
         x = BatchNormalization()(x)
         x = MaxPooling3D(pool_size=(1, 2, 2), strides=None)(x)
 
-        if self.fullnet:
+        # Block 2
+        x = Conv3D(self.filters, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
 
-            # Block 2
-            x = Conv3D(self.filters, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
+        # Block 3
+        x = Conv3D(self.filters, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling3D(pool_size=(1, 2, 2), strides=None)(x)
 
-            # Block 3
-            x = Conv3D(self.filters, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
-            x = MaxPooling3D(pool_size=(1, 2, 2), strides=None)(x)
+        # Block 4
+        x   = Conv3D(self.filters* 2, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
 
-            # Block 4
-            x   = Conv3D(self.filters* 2, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
+        # Block 5
+        x = Conv3D(self.filters * 2, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling3D(pool_size=(1, 2, 2), strides=None)(x)
 
-            # Block 5
-            x = Conv3D(self.filters * 2, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
-            x = MaxPooling3D(pool_size=(1, 2, 2), strides=None)(x)
+        # Block 6
+        x = Conv3D(self.filters * 4, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
 
-            # Block 6
-            x = Conv3D(self.filters * 4, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
+        # Block 7
+        x = Conv3D(self.filters * 4, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling3D(pool_size=(2, 1, 2), strides=None)(x)
 
-            # Block 7
-            x = Conv3D(self.filters * 4, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
-            x = MaxPooling3D(pool_size=(2, 1, 2), strides=None)(x)
+        # Block 8
+        x = Conv3D(self.filters * 8, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
 
-            # Block 8
-            x = Conv3D(self.filters * 8, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
+        # Block 9
+        x = Conv3D(self.filters * 8, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
 
-            # Block 9
-            x = Conv3D(self.filters * 8, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
-
-            # Block 10
-            x = Conv3D(self.filters * 8, (3, 3, 3), activation='relu')(x)
-            x = BatchNormalization()(x)
-            x = MaxPooling3D(pool_size=(2, 1, 2))(x)
+        # Block 10
+        x = Conv3D(self.filters * 8, (3, 3, 3), activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling3D(pool_size=(2, 1, 2))(x)
 
         # Reduce model complexity by 1x1x1 convolution
         # replaces x = Dense(self.fc_nodes, activation='relu')(x)
@@ -85,9 +82,9 @@ class Convmodel:
         # Regression output
         net_cfr = Dense(self.fc_nodes, activation='relu')(x)
         net_cfr = BatchNormalization()(net_cfr)
-        score_output = Dense(1, name = 'score_output')(net_cfr)
+        score_output = Dense(1, name='score_output')(net_cfr)
 
         # Combined classification (net_cat) and regression (net_cfr) outputs
-        model = Model(inputs = video, outputs = [class_output, score_output])
+        model = Model(inputs=video, outputs=[class_output, score_output])
 
         return model

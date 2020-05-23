@@ -10,11 +10,21 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
 pd.set_option('display.width', 500)
 
+#import pdb;pdb.set_trace()
+
 #%% files and paths
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '200227'
+meta_date = '200519'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
+
+# Output file
+meta_filename = 'echo_BWH_meta_'+meta_date+'.parquet'
+
+# Some feather files contain None where the file names should be. Lets collect them.
+empty_feather_list = []
+empty_feather_list_file = os.path.join(meta_dir, 'empty_view_classification_files.txt')
+
 
 #%% Load the file names
 file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
@@ -39,7 +49,10 @@ def get_metadata(df_file, study, metacol):
     if df_studymeta.shape[0] > 0:
         metafile = os.path.join(df_studymeta.meta_dir.iloc[0], df_studymeta.meta_filename.iloc[0])
         meta_df = pd.read_feather(metafile)
-        #meta_df = meta_df.drop(columns = ['index'])
+        # Some of the view classification feather files have empty file names
+        if len(meta_df.loc[meta_df['index'].isnull()]) > 0:
+            empty_feather_list.append(metafile)
+            meta_df = meta_df.loc[~meta_df['index'].isnull()]
     else:
         meta_df = pd.DataFrame()
     return meta_df
@@ -59,10 +72,10 @@ def collect_meta_study(df, study):
                                              manufacturer = mdf.manufacturer.values[0])
 
     # Skip the whole extraction if there is no video metadata or view prediction
-    mdf_video = get_metadata(df_file = df, study = study, metacol = 'video_metadata_withScale')
-    mdf_view = get_metadata(df_file = df, study = study, metacol = 'viewPredictionsVideo_withRV')
+    mdf_video = get_metadata(df_file=df, study=study, metacol='video_metadata_withScale')
+    mdf_view = get_metadata(df_file=df, study=study, metacol='viewPredictionsVideo_withRV')
 
-    if (mdf_video.shape[0]>0) & (mdf_view.shape[0]>0):
+    if (mdf_video.shape[0] > 0) & (mdf_view.shape[0] > 0):
 
         # Add video_metadata
         mdf_video = mdf_video.assign(fileid = mdf_video.identifier.apply(lambda f: f.split('.')[0])).\
@@ -85,7 +98,6 @@ df_meta_list = [] # Collect filenames with meta data
 df_missing_meta_list = [] # Collect studies with missing meta data
 
 study_list = sorted(list(file_df2.study.unique()))
-meta_filename = 'echo_BWH_meta_cfr_'+meta_date+'.parquet'
 meta_missing_filename = meta_filename.split('.')[0]+'_missing.parquet'
 
 start_time = time.time()
@@ -97,9 +109,7 @@ for s, study in enumerate(study_list):
         print('Not enough meta data for study {}. Skipping.'.format(study))
         df_missing_meta_list.append(file_df2[file_df2.study == study])
     if (s+1) % 100 == 0:
-        print('Study {} of {}, time {:.1f} seconds.'.format(s + 1,
-                                                len(study_list),
-                                                time.time()-start_time))
+        print('Study {} of {}, time {:.1f} seconds.'.format(s + 1, len(study_list), time.time()-start_time))
 
 # Concat all data frames
 df_meta = pd.concat(df_meta_list, ignore_index = True).reset_index(drop = True)
@@ -113,3 +123,6 @@ df_meta.to_parquet(os.path.join(meta_dir, meta_filename))
 # Here are the .npy files that are missing meta data
 # Missing either video_metadata_withScale OR viewPredictionsVideo_withRV
 df_missing_meta.to_parquet(os.path.join(meta_dir, meta_missing_filename))
+
+# List of view classification files that contain empty rows
+pd.DataFrame(empty_feather_list).to_csv(empty_feather_list_file, header=False, index=False)
