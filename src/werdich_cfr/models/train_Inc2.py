@@ -10,7 +10,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% Some support functions
 
@@ -18,14 +18,21 @@ def write_model_dict(model_dict, file):
     with open(file, 'wb') as f:
         pickle.dump(model_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
     print('Saved {}.'.format(file))
+#%% Host name
+import socket
+print(socket.gethostname())
 
-#%% Directories and data sets
+#%% Directories and data sets: For all models
+cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+
+run_dict_1 = {'model_name': }
+
 
 # Model name
 cfr_meta_date = '200425'
 model_name = 'rest_global_'+'0503dgx1'
 #model_name = 'test_inc2'
-cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+
 log_dir = os.path.join(cfr_dir, 'log', model_name)
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_'+cfr_meta_date, 'global')
 train_files = sorted(glob.glob(os.path.join(tfr_data_dir, 'cfr_global_a4c_train_'+cfr_meta_date+'_*.tfrecords')))
