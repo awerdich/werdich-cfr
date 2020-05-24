@@ -32,7 +32,7 @@ def get_file_list(tfr_data_dir, meta_date, dset, view, mode):
     return file_list
 
 def forward_pass_testset(model_dict, train_dict, VT):
-    chkpt_list = [1, 2]
+    chkpt_list = [50, 100, 150]
     chkpt_name_list = [model_dict['name'] + '_chkpt_' + str(chkid).zfill(3) + '.h5' for chkid in chkpt_list]
     chkpt_file_list = [os.path.join(log_dir, chkpoint_name) for chkpoint_name in chkpt_name_list]
 
