@@ -65,28 +65,23 @@ class VideoTrainer:
         df = pd.concat([pd.read_parquet(file) for file in parquet_file_list], axis=0, ignore_index=True)
         n_records = len(df.filename.unique())
         steps_per_epoch = int(np.floor(n_records / batch_size)) + 1
-
         return steps_per_epoch
 
     def compile_inc2model(self):
         """ Set up the model with loss function, metrics, etc. """
 
-        # Loss and accuracy metrics for each output
-        loss = {'score_output': tf.keras.losses.MeanSquaredError()}
-
-        #loss_weights = {'cfr_output': self.train_dict['loss_weight_cfr'],
-        #               'mbf_output': self.train_dict['loss_weight_mbf']}
-
-        metrics = {'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
-
-        # Optimizer
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
-
-        # Build the model
-        # mirrored_strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
+        # Build the model in the distribution strategy scope
         mirrored_strategy = tf.distribute.MirroredStrategy(devices=self.train_dict['train_device_list'])
         with mirrored_strategy.scope():
+            # Define the model
             model = Inc2model(model_dict=self.model_dict).video_encoder()
+            # Loss and accuracy metrics for each output
+            loss = {'score_output': tf.keras.losses.MeanSquaredError()}
+            # Metrics
+            metrics = {'score_output': tf.keras.metrics.MeanAbsolutePercentageError()}
+            # Optimizer
+            optimizer = tf.keras.optimizers.RMSprop(learning_rate=self.train_dict['learning_rate'])
+            # Compile the model
             model.compile(loss=loss,
                           optimizer=optimizer,
                           metrics=metrics)
@@ -94,7 +89,7 @@ class VideoTrainer:
 
     def create_callbacks(self):
         """ Callbacks for model checkpoints and tensorboard visualizations """
-        checkpoint_name = self.model_dict['name']+'_chkpt_{epoch:02d}'+'.h5'
+        checkpoint_name = self.model_dict['name']+'_chkpt_{epoch:03d}'+'.h5'
         checkpoint_file = os.path.join(self.log_dir, checkpoint_name)
 
         checkpoint_callback = ModelCheckpoint(filepath=checkpoint_file,
