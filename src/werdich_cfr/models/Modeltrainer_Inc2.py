@@ -13,6 +13,7 @@ pd.set_option('display.width', 1000)
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard, Callback
+from tensorflow.keras.models import load_model
 
 # Custom imports
 from werdich_cfr.tfutils.TFRprovider import DatasetProvider
@@ -149,6 +150,7 @@ class VideoTrainer:
                          epochs=self.train_dict['n_epochs'],
                          verbose=self.train_dict['verbose'],
                          validation_data=eval_set,
+                         shuffle=True,
                          initial_epoch=0,
                          steps_per_epoch=train_steps_per_epoch,
                          validation_steps=self.train_dict['validation_batches'],
@@ -159,3 +161,38 @@ class VideoTrainer:
         model.save(os.path.join(self.log_dir, self.model_dict['name'] + '.h5'))
 
         return hist
+
+    def predict_on_test(self, test_tfr_file_list, checkpoint_file):
+
+        # Create test set
+        testset_provider = self.create_dataset_provider(augment=False)
+        testset = testset_provider.make_batch(tfr_file_list=test_tfr_file_list,
+                                              batch_size=self.train_dict['eval_batch_size'],
+                                              shuffle=False,
+                                              buffer_n_steps=None,
+                                              repeat_count=1,
+                                              drop_remainder=False)
+        n_steps = 0
+        score_list = []
+        print('Extracting true labels from testset.')
+        for n_steps, batch in enumerate(testset):
+            score_list.extend(batch[1]['score_output'].numpy())
+        n_steps += 1
+        print('Samples: {}, steps: {}'.format(len(score_list), n_steps))
+
+        model = load_model(checkpoint_file)
+        predictions = model.predict(testset, verbose=1, steps=n_steps)
+        predictions_list = [pred[0] for pred in predictions]
+
+        pred_col_name = os.path.basename(checkpoint_file).split('.')[0]
+        pred_df = pd.DataFrame({'label': score_list,
+                                pred_col_name: predictions_list})
+        return pred_df
+
+
+
+
+
+
+
+

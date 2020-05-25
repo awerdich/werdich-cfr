@@ -17,22 +17,28 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 # Directories and files
-tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200304')
-log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/inc2_cfr_0319dgx1')
-model_name = 'inc2_cfr_0319dgx1'
-checkpoint_file = os.path.join(log_dir, 'inc2_cfr_0319dgx1_chkpt_150.h5')
+tfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/tfr_200519/global')
+log_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/log/global_a4c_gpu2_rest_global_mbf')
+model_name = 'global_a4c_gpu2_rest_global_mbf'
+checkpoint_file = os.path.join(log_dir, 'global_a4c_gpu2_rest_global_mbf_chkpt_045.h5')
 
 # We need the model_dict for the correct image transformations
 model_dict_file = os.path.join(log_dir, model_name+'_model_dict.pkl')
 with open(model_dict_file, 'rb') as fl:
     model_dict = pickle.load(fl)
 
-tfr_file_list = sorted(glob.glob(os.path.join(tfr_dir, 'cfr_resized75_a4c_test_200304_*.tfrecords')))
+# Feature_dict
+feature_dict_file = os.path.join(tfr_dir, 'global_pet_echo_dataset_200519.pkl')
+with open(feature_dict_file, 'rb') as fl:
+    feature_dict = pickle.load(fl)
+
+tfr_file_list = sorted(glob.glob(os.path.join(tfr_dir, 'cfr_global_a4c_test_200519_*.tfrecords')))
 parquet_file_list = [file.replace('.tfrecords', '.parquet') for file in tfr_file_list]
 dataset_basename = os.path.basename(tfr_file_list[0]).split('.')[0].rsplit('_', maxsplit=1)[0]
 
 # Create a test data set
-testset_provider = DatasetProvider(output_height=model_dict['im_size'][0],
+testset_provider = DatasetProvider(feature_dict=feature_dict,
+                                   output_height=model_dict['im_size'][0],
                                    output_width=model_dict['im_size'][1],
                                    im_scale_factor=model_dict['im_scale_factor'],
                                    model_output=model_dict['model_output'])
