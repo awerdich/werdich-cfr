@@ -158,8 +158,8 @@ for m, model_output in enumerate(response_variables_list):
                   'n_epochs': 150,
                   'verbose': 1,
                   'train_file_list': train_file_list,
-                  'test_file_list': test_file_list,
-                  'eval_file_list': eval_file_list}
+                  'eval_file_list': eval_file_list,
+                  'test_file_list': test_file_list}
 
     # Save model dictionaries before starting to train
     # Create the log dir, if it does not exist already
