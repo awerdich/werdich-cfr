@@ -15,7 +15,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% Some helper functions
 
@@ -44,7 +44,7 @@ dset = 'global'
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_' + meta_date, dset)
 response_variables_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
 features_dict_file = os.path.join(tfr_data_dir, dset+'_pet_echo_dataset_'+meta_date+'.pkl')
-model_name = dset+'_'+view+'_'+hostname.strip('obi-')
+model_name = dset+'_fc128_'+view+'_'+hostname.strip('obi-')
 run_model_dict_1 = {'model_name': model_name,
                     'dset': dset,
                     'response_variables_list': response_variables_list,
@@ -57,7 +57,7 @@ dset = 'nondefect'
 tfr_data_dir = os.path.join(cfr_dir, 'tfr_' + meta_date, dset)
 response_variables_list = ['rest_mbf_unaff', 'stress_mbf_unaff', 'unaffected_cfr']
 features_dict_file = os.path.join(tfr_data_dir, dset+'_pet_echo_dataset_'+meta_date+'.pkl')
-model_name = dset+'_'+view+'_'+hostname.strip('obi-')
+model_name = dset+'_fc128_'+view+'_'+hostname.strip('obi-')
 run_model_dict_2 = {'model_name': model_name,
                     'dset': dset,
                     'response_variables_list': response_variables_list,
@@ -100,7 +100,7 @@ for m, model_output in enumerate(response_variables_list):
                   'min_rate': 21,
                   'n_frames': 40,
                   'filters': 64,
-                  'fc_nodes': 1,
+                  'fc_nodes': 128,
                   'model_output': model_output,
                   'kernel_init': tf.keras.initializers.GlorotNormal(),
                   'bias_init': tf.keras.initializers.Zeros()}
@@ -109,8 +109,8 @@ for m, model_output in enumerate(response_variables_list):
     train_dict = {'train_device_list': device_list,
                   'learning_rate': 0.0001,
                   'augment': False,
-                  'train_batch_size': 36,
-                  'eval_batch_size': 36,
+                  'train_batch_size': 18,
+                  'eval_batch_size': 18,
                   'validation_batches': None,
                   'validation_freq': 1,
                   'n_epochs': 150,

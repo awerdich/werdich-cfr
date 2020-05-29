@@ -150,9 +150,15 @@ class Inc2model:
         x = Dropout(0.4)(x)
 
         # MBF OUTPUT
-        score_output = Dense(self.fc_nodes, activation='relu')(x)
-        score_output = BatchNormalization(scale=False)(score_output)
-        score_output = Dense(1, name='score_output', activation=None)(score_output)
+        if self.fc_nodes==1:
+            score_output = Dense(self.fc_nodes, activation='relu')(x)
+            score_output = BatchNormalization(scale=False)(score_output)
+            score_output = Dense(1, name='score_output', activation=None)(score_output)
+        else:
+            score_output = Conv3D(self.fc_nodes, (1, 1, 1), activation='relu')(x)
+            score_output = BatchNormalization(scale=False)(score_output)
+            score_output = Conv3D(1, (1, 1, 1), name='score_output', activation=None)(score_output)
+            score_output = GlobalAveragePooling3D()(score_output)
 
         model = Model(inputs=video, outputs=score_output)
 
