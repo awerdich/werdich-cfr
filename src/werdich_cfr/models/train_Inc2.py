@@ -15,7 +15,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% Some helper functions
 
@@ -90,7 +90,7 @@ test_file_list = get_file_list(tfr_data_dir, meta_date=meta_date, dset=run_model
 response_variables_list = run_model_dict['response_variables_list']
 for m, model_output in enumerate(response_variables_list):
 
-    model_name = run_model_dict['model_name']+'_'+model_output
+    model_name = run_model_dict['model_name']+'_fc128_'+model_output
     log_dir = os.path.join(cfr_dir, 'log', model_name)
 
     # Model parameters
@@ -100,7 +100,7 @@ for m, model_output in enumerate(response_variables_list):
                   'min_rate': 21,
                   'n_frames': 40,
                   'filters': 64,
-                  'fc_nodes': 1,
+                  'fc_nodes': 128,
                   'model_output': model_output,
                   'kernel_init': tf.keras.initializers.GlorotNormal(),
                   'bias_init': tf.keras.initializers.Zeros()}
@@ -109,8 +109,8 @@ for m, model_output in enumerate(response_variables_list):
     train_dict = {'train_device_list': device_list,
                   'learning_rate': 0.0001,
                   'augment': False,
-                  'train_batch_size': 36,
-                  'eval_batch_size': 36,
+                  'train_batch_size': 18,
+                  'eval_batch_size': 18,
                   'validation_batches': None,
                   'validation_freq': 1,
                   'n_epochs': 150,
