@@ -142,7 +142,7 @@ class DatasetProvider:
     def augment_image(self, image):
 
         # maximum rotation angle in degrees
-        max_ang_deg = 15
+        max_ang_deg = 30
         max_ang = np.pi / 180 * max_ang_deg
 
         # Random rotation
