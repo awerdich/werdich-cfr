@@ -233,7 +233,7 @@ class DatasetProvider:
 
             #n_parallel_calls = tf.data.experimental.AUTOTUNE
 
-            files = tf.data.Dataset.list_files(tfr_file_list, shuffle = True)
+            files = tf.data.Dataset.list_files(tfr_file_list, shuffle=True)
 
             dataset = files.interleave(tf.data.TFRecordDataset,
                                        cycle_length=len(tfr_file_list),
