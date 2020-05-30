@@ -142,9 +142,6 @@ class Inc2model:
                              filters_pool_proj=self.filters * 2)
         x = BatchNormalization(scale=False)(x)
 
-        # OUTPUT LAYERS
-        #x = Flatten()(x)
-
         # MBF OUTPUT
         if self.fc_nodes==1:
             score_output = GlobalAveragePooling3D()(x)

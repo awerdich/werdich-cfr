@@ -151,8 +151,14 @@ class DatasetProvider:
                                                           dtype=tf.float32),
                                  interpolation='NEAREST')
 
+        # Gaussian noise
+        common_type = tf.float32  # Make noise and image of the same type
+        gnoise = tf.random.normal(shape=tf.shape(image), mean=0.0, stddev=0.25, dtype=common_type)
+        image_type_converted = tf.image.convert_image_dtype(image, dtype=common_type, saturate=False)
+        image = tf.add(image_type_converted, gnoise)
+
         # Brightness, contrast
-        image = tf.image.random_brightness(image, 0.5)
+        image = tf.image.random_brightness(image, max_delta=0.5)
         image = tf.image.random_contrast(image, 0.7, 2.5)
 
         return image
@@ -178,16 +184,17 @@ class DatasetProvider:
             image = tf.image.resize_with_crop_or_pad(image,
                                                      target_height=self.output_height,
                                                      target_width=self.output_width)
-        # Augment images
-        if self.augment:
-            image = self.augment_image(image)
 
         # Scale image to have mean 0 and variance 1
         image = tf.cast(image, tf.float32)
         image = tf.image.adjust_contrast(image, contrast_factor=5)
-        output_image = tf.image.per_image_standardization(image)
+        image = tf.image.per_image_standardization(image)
 
-        return output_image
+        # Augment images
+        if self.augment:
+            image = self.augment_image(image)
+
+        return image
 
     def _parse(self, serialized):
 
