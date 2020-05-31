@@ -96,7 +96,8 @@ def predict_from_model(model_dir, epoch_list):
             pred_df = pred_df.rename(columns=rename_dict).assign(model_name=model_dict['name'],
                                                                  model_output=model_dict['model_output'],
                                                                  epoch=epoch_list[c],
-                                                                 checkpoint_file=checkpoint_file)
+                                                                 checkpoint_file=checkpoint_file,
+                                                                 dset=os.path.basename(tfr_dir))
             # calculate correlation coefficients
             spear_cor = spearmanr(pred_df.label, pred_df.pred)
             pear_cor = pearsonr(pred_df.label, pred_df.pred)
@@ -109,7 +110,8 @@ def predict_from_model(model_dir, epoch_list):
                         'spear_p': [spear_cor[1]],
                         'pear_cor': [pear_cor[0]],
                         'pear_p': [pear_cor[1]],
-                        'n_samples': [pred_df.shape[0]]}
+                        'n_samples': [pred_df.shape[0]],
+                        'dset': [os.path.basename(tfr_dir)]}
 
             df_pred_checkpoints.append(pred_df)
             df_cor_checkpoints.append(pd.DataFrame(cor_dict))
