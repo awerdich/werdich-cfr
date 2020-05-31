@@ -147,7 +147,9 @@ for m, model_output in enumerate(response_variables_list):
     pred_df_list = []
     for c, checkpoint_file in enumerate(chkpt_file_list):
         print(f'Checkpoint {c + 1}/{len(chkpt_file_list)}: {checkpoint_file}')
-        pred = VT.predict_on_test(test_file_list, checkpoint_file)
+        pred = VT.predict_on_test(test_tfr_file_list=test_file_list,
+                                  checkpoint_file=checkpoint_file,
+                                  batch_size=train_dict['eval_batch_size'])
         pred_df_list.append(pred)
 
     # Concatenate all predictions

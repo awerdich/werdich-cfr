@@ -162,12 +162,12 @@ class VideoTrainer:
 
         return hist
 
-    def predict_on_test(self, test_tfr_file_list, checkpoint_file):
+    def predict_on_test(self, test_tfr_file_list, checkpoint_file, batch_size):
 
         # Create test set
         testset_provider = self.create_dataset_provider(augment=False)
         testset = testset_provider.make_batch(tfr_file_list=test_tfr_file_list,
-                                              batch_size=self.train_dict['eval_batch_size'],
+                                              batch_size=batch_size,
                                               shuffle=False,
                                               buffer_n_steps=None,
                                               repeat_count=1,
@@ -185,7 +185,8 @@ class VideoTrainer:
         predictions_list = [pred[0] for pred in predictions]
 
         pred_col_name = os.path.basename(checkpoint_file).split('.')[0]
-        pred_df = pd.DataFrame({'label': score_list,
+        label_col_name = self.model_dict['model_output']
+        pred_df = pd.DataFrame({label_col_name: score_list,
                                 pred_col_name: predictions_list})
         return pred_df
 
