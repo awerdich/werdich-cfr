@@ -10,6 +10,7 @@ ipywidgets = "*"
 pandas = "*"
 pyarrow = "*"
 bokeh = "*"
+seaborn = "*"
 
 [packages]
 werdich-cfr = {editable = true,path = "."}
