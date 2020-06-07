@@ -21,6 +21,7 @@ physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 #%% Directories and parameters
 data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+predictions_dir = os.path.join(data_root, 'predictions')
 log_dir = os.path.join(data_root, 'log')
 model_dir_list = glob.glob(os.path.join(log_dir, '*/'))
 model_dir_list = [os.path.normpath(d) for d in model_dir_list]
@@ -128,16 +129,21 @@ def predict_from_model(model_dir, epoch_list):
     return test_df, df_pred_model, df_cor_model
 
 #%% Run the predictions and save the outputs
-predictions_dir = os.path.join(data_root, 'predictions')
 epoch_list = [50, 100, 150]
 for m, model_dir in enumerate(model_dir_list):
-    print(f'Predictions for model {m+1}/{len(model_dir_list)}: {os.path.basename(model_dir)}')
-    test_df, df_pred_model, df_cor_model = predict_from_model(model_dir, epoch_list)
-    if len(df_pred_model)>0:
-        model_name = os.path.basename(model_dir)
-        pred_file_name = model_name+'_pred.parquet'
-        cor_file_name = model_name+'_cor.parquet'
-        test_df_file_name = model_name+'_testdf.parquet'
-        df_pred_model.to_parquet(os.path.join(predictions_dir, pred_file_name))
-        df_cor_model.to_parquet(os.path.join(predictions_dir, cor_file_name))
-        test_df.to_parquet(os.path.join(predictions_dir, test_df_file_name))
+
+    model_name = os.path.basename(model_dir)
+    pred_file_name = model_name + '_pred.parquet'
+    cor_file_name = model_name + '_cor.parquet'
+    test_df_file_name = model_name + '_testdf.parquet'
+
+    # Skip predictions if already done
+    if not os.path.exists(os.path.join(predictions_dir, pred_file_name)):
+        print(f'Predictions for model {m+1}/{len(model_dir_list)}: {os.path.basename(model_dir)}')
+        test_df, df_pred_model, df_cor_model = predict_from_model(model_dir, epoch_list)
+        if len(df_pred_model)>0:
+            df_pred_model.to_parquet(os.path.join(predictions_dir, pred_file_name))
+            df_cor_model.to_parquet(os.path.join(predictions_dir, cor_file_name))
+            test_df.to_parquet(os.path.join(predictions_dir, test_df_file_name))
+    else:
+        print(f'Test predictions already done for model {model_name}. Skipping')
