@@ -75,7 +75,7 @@ meta_disqualified_list = []
 
 for f, filename in enumerate(file_list):
 
-    if (f+1) % 10 == 0:
+    if (f+1) % 1000 == 0:
         print(f'Loading file {f+1} of {len(file_list)}: {filename}.')
 
     im = vc.process_video(filename)
