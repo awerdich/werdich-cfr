@@ -106,7 +106,7 @@ def predict_from_model(model_dir, epoch_list):
             cor_dict = {'model_name': [model_dict['name']],
                         'model_output': [model_dict['model_output']],
                         'epoch': [epoch_list[c]],
-                        'chechkpoint_file': [checkpoint_file],
+                        'checkpoint_file': [checkpoint_file],
                         'spear_cor': [spear_cor[0]],
                         'spear_p': [spear_cor[1]],
                         'pear_cor': [pear_cor[0]],
