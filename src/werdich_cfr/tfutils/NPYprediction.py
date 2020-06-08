@@ -52,7 +52,7 @@ def predict_from_array_list(model, array_list, batch_size):
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 batch_size = 32
 # Maximum number of files to load into memory at a time
-n_files_in_mem = 1000
+n_files_in_mem = 5000
 
 # Model info
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
@@ -136,7 +136,7 @@ for m, model_name in enumerate(model_list):
     pred_df = pd.concat(pred_df_list, axis=0, ignore_index=True)
     pred_df = pred_df.merge(right=echo_df, on='filename', how='left').reset_index(drop=True)
 
-    video_list_file_name = 'BWH_2015-05-01_2015-10-31_FirstEcho_'+model_output+'.parquet'
+    video_list_file_name = 'BWH_2015-05-01_2015-10-31_FirstEcho_a4c_'+model_output+'.parquet'
     video_list_file = os.path.join(cfr_data_root, 'predictions_echodata', video_list_file_name)
 
     pred_df.to_parquet(video_list_file)
