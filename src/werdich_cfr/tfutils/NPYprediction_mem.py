@@ -25,9 +25,10 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
+predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','testset')
 min_rate = 21
 n_frames = 40
-batch_size = 8
+batch_size = 32
 
 #%% Some helper functions
 
@@ -60,10 +61,25 @@ def predict_from_array_list(model, array_list, batch_size):
 
 #%% Copy image data into memory
 
+# Model info
+meta_date = '200519'
+best_models = pd.read_parquet(os.path.join(cfr_data_root, 'best_models_200607.parquet')).reset_index(drop=True)
+model_list = list(best_models.model_name.unique())
+meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
+
+# File list for test data depends on the model
+dset = 'nondefect'
+model_list = [model for model in model_list if model.split('_')[0]==dset]
+echo_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, dset)
+test_parquet_list = sorted(glob.glob(os.path.join(echo_dir, '*_test_'+meta_date+'_?.parquet')))
+echo_df_list = [pd.read_parquet(parquet_file) for parquet_file in test_parquet_list]
+echo_df_file = test_parquet_list[0].replace('_0', '')
+echo_df = pd.concat(echo_df_list)
+
 # File list with .npy.lz4 files
 # NPY file list
-echo_df_file = os.path.join(cfr_data_root, 'metadata_200606', 'BWH_2015-05-01_2015-10-31_FirstEcho_a4c.parquet')
-echo_df = pd.read_parquet(echo_df_file)
+#echo_df_file = os.path.join(cfr_data_root, 'metadata_200606', 'BWH_2015-05-01_2015-10-31_FirstEcho_a4c.parquet')
+#echo_df = pd.read_parquet(echo_df_file)
 file_list = list(echo_df.filename.unique())
 
 # Image processing class
@@ -75,7 +91,7 @@ meta_disqualified_list = []
 
 for f, filename in enumerate(file_list):
 
-    if (f+1) % 1000 == 0:
+    if (f+1) % 100 == 0:
         print(f'Loading file {f+1} of {len(file_list)}: {filename}.')
 
     im = vc.process_video(filename)
@@ -87,21 +103,17 @@ for f, filename in enumerate(file_list):
         meta_disqualified_list.append(echo_df[echo_df.filename==filename])
         print('Skipping this one.')
 
-echo_df_disqualified = pd.concat(meta_disqualified_list, ignore_index=True).reset_index(drop=True)
+if len(meta_disqualified_list)>0:
+    echo_df_disqualified = pd.concat(meta_disqualified_list, ignore_index=True).reset_index(drop=True)
+    # Save disqualified metadata
+    print(f'Found {echo_df_disqualified.shape[0]} of {len(file_list)} disqualified videos.')
+    disqualified_filename = os.path.basename(echo_df_file).split('.')[0] + '_disqualified.parquet'
+    echo_df_disqualified.to_parquet(os.path.join(predict_dir, disqualified_filename))
+
 print(f'Loaded {len(image_array_list)} of {len(file_list)} videos into memory.')
-print(f'Found {echo_df_disqualified.shape[0]} of {len(file_list)} disqualified videos.')
 
-# Save disqualified metadata
-disqualified_filename = os.path.basename(echo_df_file).split('.')[0]+'_disqualified.parquet'
-echo_df_disqualified.to_parquet(os.path.join(cfr_data_root, 'metadata_200606', disqualified_filename))
 
-#%% Run predictions for all 6 models
-
-# Model info
-meta_date = '200519'
-best_models = pd.read_parquet(os.path.join(cfr_data_root, 'best_models_200607.parquet')).reset_index(drop=True)
-model_list = list(best_models.model_name.unique())
-meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
+#%% Run predictions for all models
 
 # Loop over the models
 for m, model_name in enumerate(model_list):
@@ -151,6 +163,6 @@ for m, model_name in enumerate(model_list):
     pred_df = pred_df_c.merge(right=echo_df, on='filename', how='left').reset_index(drop=True)
 
     video_list_file_name = os.path.basename(echo_df_file).split('.')[0]+'_'+model_output+'.parquet'
-    video_list_file = os.path.join(cfr_data_root, 'predictions_echodata', video_list_file_name)
+    video_list_file = os.path.join(predict_dir, video_list_file_name)
 
     pred_df.to_parquet(video_list_file)
