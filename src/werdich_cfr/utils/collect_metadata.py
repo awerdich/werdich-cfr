@@ -4,7 +4,9 @@ Or just the MRNs for the project """
 
 import os
 import pandas as pd
+import numpy as np
 import time
+import lz4.frame
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
@@ -16,7 +18,15 @@ pd.set_option('display.width', 500)
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200606'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-file_df_file = 'echo_BWH_npy_feather_files_pred_'+meta_date+'.parquet'
+file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
+
+# Filter by the studies that we need
+# echo list
+echo_list_dir = os.path.normpath('/mnt/obi0/sgoto/BWHCFREvents/echoList')
+echo_list_filename = 'BWH_2015-05-01_2015-10-31_FirstEcho.txt'
+echo_list_file = os.path.join(echo_list_dir, echo_list_filename)
+echo_list = pd.read_csv(echo_list_file, header='infer', sep='\t')
+study_list = list(echo_list.study.unique())
 
 # Output file
 meta_filename = 'echo_BWH_meta_pred_'+meta_date+'.parquet'
@@ -33,6 +43,10 @@ file_df = pd.read_parquet(os.path.join(meta_dir, file_df_file))
 feather_dsc_list_original = list(file_df.dsc.unique())
 feather_dsc_list = ['video_metadata_withScale', 'viewPredictionsVideo_withRV', 'study_metadata']
 file_df2 = file_df[file_df.dsc.isin(feather_dsc_list)]
+
+# Filter by the list of echos that we need (SPECIAL)
+file_df2 = file_df2[file_df2.study.isin(study_list)]
+
 print('Collecting metadata from df: {}'.format(file_df_file))
 print('Number of unique npy files: {}'.format(len(file_df2.filename.unique())))
 print('Number of studies: {}'.format(len(file_df2.study.unique())))
@@ -92,6 +106,30 @@ def collect_meta_study(df, study):
         df_meta_study = pd.DataFrame()
     return df_meta_study
 
+def collect_intensities_from_study_files(df_meta_study):
+    # open the files and get the intensities
+    files_s_int_list = []
+    for filename in df_meta_study.filename.unique():
+
+        file_s = df_meta_study[df_meta_study.filename==filename].iloc[0]
+        file = os.path.join(file_s.dir, filename)
+
+        try:
+            with lz4.frame.open(file, 'rb') as fp:
+                data = np.load(fp)
+        except IOError as err:
+            print('Cannot open npy file.')
+            print(err)
+        else:
+            file_s['min_data'] = np.amin(data)
+            file_s['max_data'] = np.amax(data)
+            file_s['mean_data'] = np.mean(data)
+            file_s['std_dat'] = np.std(data)
+            files_s_int_list.append(file_s.to_frame().transpose())
+
+    df = pd.concat(files_s_int_list, axis = 0)
+
+    return(df)
 
 #%% Run the function.
 df_meta_list = [] # Collect filenames with meta data
@@ -102,9 +140,13 @@ meta_missing_filename = meta_filename.split('.')[0]+'_missing.parquet'
 
 start_time = time.time()
 for s, study in enumerate(study_list):
+    print(f'Study {s + 1} of {len(study_list)}')
     df_meta_study = collect_meta_study(file_df2, study = study)
     if df_meta_study.shape[0] > 0:
-        df_meta_list.append(df_meta_study)
+        # Collect the intensities
+        print(f'Collecting intensities from {len(df_meta_study.filename.unique())} files.')
+        df_meta_study_int = collect_intensities_from_study_files(df_meta_study)
+        df_meta_list.append(df_meta_study_int)
     else:
         print('Not enough meta data for study {}. Skipping.'.format(study))
         df_missing_meta_list.append(file_df2[file_df2.study == study])
