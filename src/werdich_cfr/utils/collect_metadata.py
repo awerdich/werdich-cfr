@@ -17,23 +17,24 @@ pd.set_option('display.width', 500)
 #%% files and paths
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200606'
+location = 'MGH'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-file_df_file = 'echo_BWH_npy_feather_files_'+meta_date+'.parquet'
+file_df_file = 'echo_'+location+'_npy_feather_files_'+meta_date+'.parquet'
 
 # Filter by the studies that we need
 # echo list
-echo_list_dir = os.path.normpath('/mnt/obi0/sgoto/BWHCFREvents/echoList')
-echo_list_filename = 'BWH_2015-05-01_2015-10-31_FirstEcho.txt'
-echo_list_file = os.path.join(echo_list_dir, echo_list_filename)
-echo_list = pd.read_csv(echo_list_file, header='infer', sep='\t')
-study_list = list(echo_list.study.unique())
+#echo_list_dir = os.path.normpath('/mnt/obi0/sgoto/BWHCFREvents/echoList')
+#echo_list_filename = 'BWH_2015-05-01_2015-10-31_FirstEcho.txt'
+#echo_list_file = os.path.join(echo_list_dir, echo_list_filename)
+#echo_list = pd.read_csv(echo_list_file, header='infer', sep='\t')
+#study_list = list(echo_list.study.unique())
 
 # Output file
-meta_filename = 'echo_BWH_meta_pred_'+meta_date+'.parquet'
+meta_filename = 'echo_'+location+'_meta_'+meta_date+'.parquet'
 
 # Some feather files contain None where the file names should be. Lets collect them.
 empty_feather_list = []
-empty_feather_list_file = os.path.join(meta_dir, 'empty_view_classification_files.txt')
+empty_feather_list_file = os.path.join(meta_dir, 'empty_view_classification_'+location+'_files.txt')
 
 
 #%% Load the file names
@@ -45,7 +46,7 @@ feather_dsc_list = ['video_metadata_withScale', 'viewPredictionsVideo_withRV', '
 file_df2 = file_df[file_df.dsc.isin(feather_dsc_list)]
 
 # Filter by the list of echos that we need (SPECIAL)
-file_df2 = file_df2[file_df2.study.isin(study_list)]
+#file_df2 = file_df2[file_df2.study.isin(study_list)]
 
 print('Collecting metadata from df: {}'.format(file_df_file))
 print('Number of unique npy files: {}'.format(len(file_df2.filename.unique())))
