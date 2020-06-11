@@ -25,7 +25,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-predict_dir = os.path.join(cfr_data_root, 'predictions_echodata')
+predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','SecondEchoGenetics')
 min_rate = 21
 n_frames = 40
 batch_size = 32
@@ -63,8 +63,7 @@ def predict_from_array_list(model, array_list, batch_size):
 
 # Model info
 meta_date = '200519'
-best_models = pd.read_parquet(os.path.join(predict_dir,
-                                           'best_models_200607_replacement.parquet')).reset_index(drop=True)
+best_models = pd.read_parquet(os.path.join(predict_dir, 'cfr_models_200611.parquet')).reset_index(drop=True)
 model_list = list(best_models.model_name.unique())
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
@@ -79,7 +78,7 @@ meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
 # File list with .npy.lz4 files
 # NPY file list
-echo_df_file = os.path.join(cfr_data_root, 'metadata_200606', 'BWH_2015-05-01_2015-10-31_FirstEcho_a4c.parquet')
+echo_df_file = os.path.join(predict_dir, 'a4cname_BWH_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
 file_list = list(echo_df.filename.unique())
 
