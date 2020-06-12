@@ -21,7 +21,7 @@ cfr_echo_dir_base = os.path.normpath('/mnt/obi0/phi/echo/npyFiles')
 cfr_echo_dir = os.path.join(cfr_echo_dir_base, location)
 
 cfr_feather_dir_base = os.path.normpath('/mnt/obi0/phi/echo/featherFiles')
-cfr_feather_dir = os.path.join(cfr_echo_dir_base, location)
+cfr_feather_dir = os.path.join(cfr_feather_dir_base, location)
 
 key='rahuldeoechobwh*'
 iv='echoisexcellent*'
