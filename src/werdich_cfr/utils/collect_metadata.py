@@ -141,13 +141,17 @@ meta_missing_filename = meta_filename.split('.')[0]+'_missing.parquet'
 
 start_time = time.time()
 for s, study in enumerate(study_list):
-    print(f'Study {s + 1} of {len(study_list)}')
+    
+    if (s+1) % 100 == 0:
+        print(f'Study {s + 1} of {len(study_list)}')
+    
     df_meta_study = collect_meta_study(file_df2, study = study)
+    
     if df_meta_study.shape[0] > 0:
         # Collect the intensities
-        print(f'Collecting intensities from {len(df_meta_study.filename.unique())} files.')
-        df_meta_study_int = collect_intensities_from_study_files(df_meta_study)
-        df_meta_list.append(df_meta_study_int)
+        # print(f'Collecting intensities from {len(df_meta_study.filename.unique())} files.')
+        # df_meta_study_int = collect_intensities_from_study_files(df_meta_study)
+        df_meta_list.append(df_meta_study)
     else:
         print('Not enough meta data for study {}. Skipping.'.format(study))
         df_missing_meta_list.append(file_df2[file_df2.study == study])
