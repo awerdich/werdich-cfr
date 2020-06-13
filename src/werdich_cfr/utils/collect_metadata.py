@@ -130,7 +130,7 @@ def collect_intensities_from_study_files(df_meta_study):
 
     df = pd.concat(files_s_int_list, axis = 0)
 
-    return(df)
+    return df
 
 #%% Run the function.
 df_meta_list = [] # Collect filenames with meta data
@@ -141,16 +141,16 @@ meta_missing_filename = meta_filename.split('.')[0]+'_missing.parquet'
 
 start_time = time.time()
 for s, study in enumerate(study_list):
-    
+
     if (s+1) % 100 == 0:
         print(f'Study {s + 1} of {len(study_list)}')
-    
+
     df_meta_study = collect_meta_study(file_df2, study = study)
-    
+
     if df_meta_study.shape[0] > 0:
         # Collect the intensities
-        # print(f'Collecting intensities from {len(df_meta_study.filename.unique())} files.')
-        # df_meta_study_int = collect_intensities_from_study_files(df_meta_study)
+        #print(f'Collecting intensities from {len(df_meta_study.filename.unique())} files.')
+        #df_meta_study_int = collect_intensities_from_study_files(df_meta_study)
         df_meta_list.append(df_meta_study)
     else:
         print('Not enough meta data for study {}. Skipping.'.format(study))
@@ -160,16 +160,17 @@ for s, study in enumerate(study_list):
 
 # Concat all data frames
 df_meta = pd.concat(df_meta_list, ignore_index = True).reset_index(drop = True)
-df_missing_meta = pd.concat(df_missing_meta_list, ignore_index=True).reset_index(drop=True)
+
+if len(df_missing_meta_list)>0:
+    df_missing_meta = pd.concat(df_missing_meta_list, ignore_index=True).reset_index(drop=True)
+    # Here are the .npy files that are missing meta data
+    # Missing either video_metadata_withScale OR viewPredictionsVideo_withRV
+    df_missing_meta.to_parquet(os.path.join(meta_dir, meta_missing_filename))
 
 # Make sure that we have consistent types in numeric columns
 num_cols = ['frame_time', 'number_of_frames', 'heart_rate', 'deltaX', 'deltaY']
 df_meta.loc[:, num_cols] = df_meta[num_cols].apply(pd.to_numeric, errors = 'coerce')
 df_meta.to_parquet(os.path.join(meta_dir, meta_filename))
-
-# Here are the .npy files that are missing meta data
-# Missing either video_metadata_withScale OR viewPredictionsVideo_withRV
-df_missing_meta.to_parquet(os.path.join(meta_dir, meta_missing_filename))
 
 # List of view classification files that contain empty rows
 pd.DataFrame(empty_feather_list).to_csv(empty_feather_list_file, header=False, index=False)
