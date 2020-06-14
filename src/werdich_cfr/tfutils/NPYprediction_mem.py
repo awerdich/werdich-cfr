@@ -82,6 +82,8 @@ echo_df_file = os.path.join(predict_dir, 'a4cname_MGH_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
 file_list = list(echo_df.filename.unique())
 
+print(f'Running inference on: {os.path.basename(echo_df_file)}.')
+
 # Image processing class
 vc = Videoconverter(min_rate=min_rate, min_frames=n_frames, meta_df=echo_df)
 
