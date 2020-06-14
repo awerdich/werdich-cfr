@@ -78,7 +78,7 @@ meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
 # File list with .npy.lz4 files
 # NPY file list
-echo_df_file = os.path.join(predict_dir, 'a4cname_BWH_a4c.parquet')
+echo_df_file = os.path.join(predict_dir, 'a4cname_MGH_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
 file_list = list(echo_df.filename.unique())
 
