@@ -17,7 +17,7 @@ pd.set_option('display.width', 500)
 #%% files and paths
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 meta_date = '200617'
-location = 'BWH'
+location = 'MGH'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 file_df_file = 'echo_'+location+'_npy_feather_files_'+meta_date+'.parquet'
 
