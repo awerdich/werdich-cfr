@@ -96,6 +96,7 @@ for dset in dset_list:
             tfr_basename = tfr_info+'_'+view+'_'+mode+'_'+meta_date+'_'+str(part).zfill(mag)
             tfr_filename = tfr_basename+'.tfrecords'
             parquet_filename = tfr_basename+'.parquet'
+            failed_filename = tfr_basename+'.failed'
 
             print()
             print('Processing {} part {} of {}'.format(tfr_filename, part + 1, len(file_list_parts)))
@@ -119,7 +120,7 @@ for dset in dset_list:
                     ser_df = ser_df[ser_df['post-2018'] == 0]
                 ser = ser_df.iloc[0]
 
-                im_array = vc.process_video(filename)
+                error, im_array = vc.process_video(filename)
 
                 if np.any(im_array):
                     # Data dictionaries
@@ -131,6 +132,7 @@ for dset in dset_list:
                     ser_df2 = ser_df.assign(im_array_shape=[list(im_array.shape)])
                     im_array_ser_list.append(ser_df2)
                 else:
+                    ser_df2 = ser_df.assign(err=[error])
                     im_failed_ser_list.append(ser_df)
 
             # Write TFR file
@@ -160,3 +162,7 @@ for dset in dset_list:
                 # When this is done, save the parquet file
                 im_array_df = pd.concat(im_array_ser_list)
                 im_array_df.to_parquet(os.path.join(tfr_dir, parquet_filename))
+
+            # Save the failed rows with the error messages
+            im_failed_df = pd.concat(im_failed_ser_list)
+            im_failed_df.to_parquet(os.path.join(tfr_dir, failed_filename))

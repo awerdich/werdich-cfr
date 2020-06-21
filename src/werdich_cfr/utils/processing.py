@@ -78,6 +78,7 @@ class Videoconverter:
     def process_video(self, filename):
         meta = self.meta_df[self.meta_df.filename == filename]
         output_array = np.zeros(1)
+        error=None
         if meta.shape[0] > 0:
             deltaX = meta.deltaX.values[0]
             deltaY = meta.deltaY.values[0]
@@ -91,6 +92,7 @@ class Videoconverter:
                 except IOError as err:
                     print('Cannot open npy file.')
                     print(err)
+                    error='load'
                 else:
                     video_len = data.shape[0] / rate
                     # If the rate is higher, we need more frames
@@ -101,10 +103,13 @@ class Videoconverter:
                     else:
                         if self.min_rate >= rate:
                             print(f'Frame rate is too low: {rate:.2f}s^-1. Skipping.')
+                            error='frame_rate'
                         if self.min_video_len >= video_len:
                             print(f'Video is too short: {video_len:.2f}s. Skipping.')
+                            error='video_len'
             else:
                 print('Meta data invalid for {}. Skipping'.format(filename))
+                error='deltaXY'
         else:
             print('No meta data for {}. Skipping'.format(filename))
-        return output_array
+        return error, output_array
