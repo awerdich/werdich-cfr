@@ -10,11 +10,12 @@ class Videoconverter:
     min_frames: minimum required number of frames
     meta_df: data frame from collect_metadata script
     """
-    def __init__(self, min_rate, min_frames, meta_df):
-        self.min_rate = min_rate
+    def __init__(self, max_frame_time_ms, min_frames, meta_df):
+        self.max_frame_time = max_frame_time_ms
+        self.min_rate = 1/max_frame_time_ms*1e3
         self.min_frames = min_frames
         self.meta_df = meta_df
-        self.min_video_len = min_frames / min_rate
+        self.min_video_len = min_frames*max_frame_time_ms*1e-3
 
     def im_scale(self, im, dx, dy):
         """ convert single images to uint8 and resize by scale factors """
