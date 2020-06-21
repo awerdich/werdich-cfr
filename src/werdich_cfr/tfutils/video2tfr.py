@@ -16,7 +16,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% Select GPUs
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='1,2,3')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 #%% files and directories and parameters for all data sets
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
