@@ -16,7 +16,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% Select GPUs
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% files and directories and parameters for all data sets
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
@@ -50,7 +50,7 @@ for dset in dset_list:
 #dset = dset_list[1]
 
     cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
-    tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, dset)
+    tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date+'A', dset)
     float_label_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
     meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
@@ -133,7 +133,7 @@ for dset in dset_list:
                     im_array_ser_list.append(ser_df2)
                 else:
                     ser_df2 = ser_df.assign(err=[error])
-                    im_failed_ser_list.append(ser_df)
+                    im_failed_ser_list.append(ser_df2)
 
             # Write TFR file
             if len(array_data_dict['image']) > 0:
