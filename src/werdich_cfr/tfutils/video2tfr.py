@@ -33,9 +33,6 @@ min_length = max_frame_time_ms*min_frames*1e-3
 
 n_tfr_files = 8 # We should have at least one TFR file per GPU
 
-# Failed data
-df_failed = pd.read_parquet(os.path.join(meta_dir, 'global_pet_echo_dataset_200617.failed'))
-
 #%% Support functions
 
 def chunks(l, n):
