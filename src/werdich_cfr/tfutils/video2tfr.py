@@ -112,7 +112,7 @@ for dset in dset_list:
             for f, filename in enumerate(file_list):
 
                 if (f+1) % 200 == 0:
-                    print('Loading video {} of {} into memory.'.format(f+1, len(file_list)))
+                    print('Loaded video {} of {} into memory.'.format(f+1, len(file_list)))
 
                 ser_df = df.loc[df.filename == filename, :]
                 # Exclude post-2018 data if there is more than one row for this file
