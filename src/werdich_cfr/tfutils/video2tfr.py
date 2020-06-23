@@ -33,6 +33,9 @@ min_length = max_frame_time_ms*min_frames*1e-3
 
 n_tfr_files = 8 # We should have at least one TFR file per GPU
 
+# Failed data
+df_failed = pd.read_parquet(os.path.join(meta_dir, 'global_pet_echo_dataset_200617.failed'))
+
 #%% Support functions
 
 def chunks(l, n):
@@ -50,7 +53,7 @@ for dset in dset_list:
 #dset = dset_list[1]
 
     cfr_meta_file = 'global_pet_echo_dataset_'+meta_date+'.parquet'
-    tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date+'A', dset)
+    tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, dset)
     float_label_list = ['rest_global_mbf', 'stress_global_mbf', 'global_cfr_calc']
     meta_df = pd.read_parquet(os.path.join(meta_dir, cfr_meta_file))
 
@@ -144,7 +147,7 @@ for dset in dset_list:
                                      float_data_dict=float_data_dict,
                                      int_data_dict=int_data_dict)
 
-                # Save feature names (needed for parsing the tfrechords files)
+                # Save feature names (needed for parsing the tfr files)
                 array_list = list(array_data_dict.keys())
                 array_list.append('shape')
                 feature_dict = {'array': array_list,
