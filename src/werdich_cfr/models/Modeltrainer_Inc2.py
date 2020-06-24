@@ -110,7 +110,7 @@ class VideoTrainer:
 
         return callback_list
 
-    def train(self, model):
+    def train(self, model, checkpoint_file=None, initial_epoch=0):
         """ Set up the training loop using model.fit """
 
         # Create datasets
@@ -146,12 +146,17 @@ class VideoTrainer:
         file_writer = tf.summary.create_file_writer(self.log_dir+'/metrics')
         file_writer.set_as_default()
 
+        # Load weights from checkpoint
+        if checkpoint_file is not None:
+            # Loads the weights
+            model.load_weights(checkpoint_file)
+
         hist = model.fit(x=train_set,
                          epochs=self.train_dict['n_epochs'],
                          verbose=self.train_dict['verbose'],
                          validation_data=eval_set,
                          shuffle=True,
-                         initial_epoch=0,
+                         initial_epoch=initial_epoch,
                          steps_per_epoch=train_steps_per_epoch,
                          validation_steps=self.train_dict['validation_batches'],
                          validation_freq=self.train_dict['validation_freq'],

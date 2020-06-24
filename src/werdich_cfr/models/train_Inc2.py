@@ -15,7 +15,8 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
+#physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% Some helper functions
 
@@ -33,7 +34,10 @@ def get_file_list(tfr_data_dir, meta_date, dset, view, mode):
 
 #%% Directories and parameters
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-hostname = socket.gethostname()
+
+#hostname = socket.gethostname()
+hostname = 'dgx-1'
+
 meta_date = '200617'
 meta_dir = os.path.join(cfr_dir, 'metadata_'+meta_date)
 view = 'a4c'
@@ -47,13 +51,14 @@ for dset in dset_list:
     tfr_data_dir = os.path.join(cfr_dir, 'tfr_' + meta_date, dset)
     features_dict_file = os.path.join(tfr_data_dir, 'global_pet_echo_dataset_'+meta_date+'.pkl')
 
+    model_name = dset + '_' + view + '_' + hostname.strip('obi-')
+
     tracer=dset.split('_')[-1]
     if tracer in tracer_list:
         response_variables_list = ['rest_global_mbf', 'stress_global_mbf']
     else:
         response_variables_list = ['global_cfr_calc', 'rest_global_mbf', 'stress_global_mbf']
 
-    model_name = dset+'_'+view+'_'+hostname.strip('obi-')
 
     run_model_dict = {'model_name': model_name,
                       'dset': dset,
@@ -109,7 +114,7 @@ for m, model_output in enumerate(response_variables_list):
                   'eval_batch_size': 72,
                   'validation_batches': None,
                   'validation_freq': 1,
-                  'n_epochs': 150,
+                  'n_epochs': 300,
                   'verbose': 1,
                   'meta_dir': meta_dir,
                   'train_file_list': train_file_list,
@@ -129,9 +134,23 @@ for m, model_output in enumerate(response_variables_list):
     model = VT.compile_inc2model()
     model.summary()
 
+    # Get the latest checkpoint
+    checkpoint_files = sorted(glob.glob(os.path.join(log_dir, model_name+'_chkpt_'+'*.h5')))
+    if len(checkpoint_files)>0:
+        checkpoint_file_base = checkpoint_files[-1].rsplit('_', maxsplit=1)[0]
+        epoch_list = [int(chkpt_file.rsplit('_', maxsplit=1)[-1].split('.')[0]) for chkpt_file in checkpoint_files]
+        max_epoch = max(epoch_list)
+        mag = len(str(max_epoch))
+        checkpoint_file = checkpoint_file_base+'_'+str(max_epoch).zfill(mag)+'.h5'
+        initial_epoch = max_epoch+1
+        print(f'Continue training from checkpoint {os.path.basename(checkpoint_file)}.')
+    else:
+        checkpoint_file = None
+        initial_epoch = 0
+
     # Run the training and save the history data
     print(f'Training model {m+1}/{len(response_variables_list)}: {model_name}')
-    hist = VT.train(model)
+    hist = VT.train(model, checkpoint_file=checkpoint_file, initial_epoch=initial_epoch)
     hist_file = os.path.join(log_dir, model_name+'_hist_dict.pkl')
     write_model_dict(hist.history, hist_file)
 
