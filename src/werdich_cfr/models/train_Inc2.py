@@ -15,8 +15,8 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPU CONFIGURATION
 
-#physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
+#physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 #%% Some helper functions
 
@@ -35,8 +35,8 @@ def get_file_list(tfr_data_dir, meta_date, dset, view, mode):
 #%% Directories and parameters
 cfr_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr')
 
-#hostname = socket.gethostname()
-hostname = 'dgx-1'
+hostname = socket.gethostname()
+#hostname = 'dgx-1'
 
 meta_date = '200617'
 meta_dir = os.path.join(cfr_dir, 'metadata_'+meta_date)
@@ -142,7 +142,7 @@ for m, model_output in enumerate(response_variables_list):
         max_epoch = max(epoch_list)
         mag = len(str(max_epoch))
         checkpoint_file = checkpoint_file_base+'_'+str(max_epoch).zfill(mag)+'.h5'
-        initial_epoch = max_epoch+1
+        initial_epoch = max_epoch
         print(f'Continue training from checkpoint {os.path.basename(checkpoint_file)}.')
     else:
         checkpoint_file = None
