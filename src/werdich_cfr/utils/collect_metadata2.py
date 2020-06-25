@@ -49,7 +49,7 @@ print('Number of studies: {}'.format(len(file_df2.study.unique())))
 # Function to load meta data for a study
 def get_study_metadata(study, meta_df):
     meta_df_study = meta_df[meta_df.study == study]
-    meta_dsc_list = set(meta_df_study.dsc.unique())
+    meta_dsc_list = list(set(meta_df_study.dsc.unique()))
 
     meta_dict = {}
 
@@ -82,6 +82,7 @@ def get_study_metadata_files(study, meta_df, meta_dsc_list=default_dsc_list):
 
             # Now we can collect the meta data for each file that we expect in this study
             meta_df_study = meta_df[meta_df.study == study]
+            meta_df_study = meta_df_study.loc[~meta_df_study.filename.isnull()]
             meta_df_study = meta_df_study.assign(file_base=meta_df_study.filename.apply(lambda s: s.split('.')[0]))
             # One row per file. We need this for later.
             meta_df_study_file = meta_df_study.drop(columns=['meta_filename', 'meta_dir', 'dsc']).drop_duplicates()
@@ -89,11 +90,13 @@ def get_study_metadata_files(study, meta_df, meta_dsc_list=default_dsc_list):
 
             # Video meta data
             video_df = meta_dict['video_metadata_withScale']
+            video_df = video_df.loc[~video_df.identifier.isnull()]
             video_df = video_df.assign(file_base=video_df.identifier.apply(lambda s: s.split('.')[0]))
             video_df_files = video_df[video_df.file_base.isin(file_base_list)].drop(columns=['index'])
 
             # View classification results
             view_df = meta_dict['viewPredictionsVideo_withRV']
+            view_df = view_df.loc[~view_df['index'].isnull()]
             view_df = view_df.assign(file_base=view_df['index'].apply(lambda s: s.split('.')[0]))
             view_df = view_df.drop(columns=['index'])
             view_df_files = view_df[view_df.file_base.isin(file_base_list)]
