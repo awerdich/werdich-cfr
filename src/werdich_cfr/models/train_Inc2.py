@@ -57,7 +57,8 @@ for dset in dset_list:
     if tracer in tracer_list:
         response_variables_list = ['rest_global_mbf', 'stress_global_mbf']
     else:
-        response_variables_list = ['global_cfr_calc', 'rest_global_mbf', 'stress_global_mbf']
+        response_variables_list = ['rest_global_mbf', 'stress_global_mbf']
+        #response_variables_list = ['global_cfr_calc', 'rest_global_mbf', 'stress_global_mbf']
 
 
     run_model_dict = {'model_name': model_name,
@@ -110,8 +111,8 @@ for m, model_output in enumerate(response_variables_list):
     train_dict = {'train_device_list': device_list,
                   'learning_rate': 0.0001,
                   'augment': False,
-                  'train_batch_size': 72,
-                  'eval_batch_size': 72,
+                  'train_batch_size': 64,
+                  'eval_batch_size': 32,
                   'validation_batches': None,
                   'validation_freq': 1,
                   'n_epochs': 300,
