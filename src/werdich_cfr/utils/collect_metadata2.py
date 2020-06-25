@@ -17,12 +17,13 @@ location = 'BWH'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 file_df_file = 'echo_'+location+'_npy_feather_files_'+meta_date+'.parquet'
 
-# Use the final data set to filter the studies that we need (shortcut)
-dataset = pd.read_parquet(os.path.join(meta_dir, 'echo_npyFiles_BWH_200617_pet.parquet'))
-filter_study_list = list(dataset.study.unique())
+# Use the final data set to filter the studies that we need
+echo_npyFiles_name = 'echo_npyFiles_'+location+'_'+meta_date+'.parquet'
+dataset = pd.read_parquet(os.path.join(meta_dir, echo_npyFiles_name))
+#filter_study_list = list(dataset.study.unique())
 
 # Output file
-meta_filename = 'echo_'+location+'_meta_'+meta_date+'_pet.parquet'
+meta_filename = 'echo_'+location+'_meta_'+meta_date+'.parquet'
 
 # Some feather files contain None where the file names should be. Lets collect them.
 empty_feather_list = []
@@ -36,7 +37,7 @@ feather_dsc_list = ['video_metadata_withScale', 'viewPredictionsVideo_withRV', '
 file_df2 = file_df[file_df.dsc.isin(feather_dsc_list)]
 
 # Filter by the list of echos that we need (SPECIAL)
-file_df2 = file_df2[file_df2.study.isin(filter_study_list)]
+#file_df2 = file_df2[file_df2.study.isin(filter_study_list)]
 
 print('Collecting metadata from df: {}'.format(file_df_file))
 print('Number of unique npy files: {}'.format(len(file_df2.filename.unique())))
@@ -55,8 +56,6 @@ def get_study_metadata(study, meta_df):
 
         m = meta_df_study[meta_df_study.dsc == dsc][['meta_dir', 'meta_filename']].drop_duplicates()
         dsc_file = os.path.join(m.meta_dir.values[0], m.meta_filename.values[0])
-
-        df = pd.DataFrame()
 
         try:
             with open(dsc_file, 'rb') as fl:

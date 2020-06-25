@@ -25,9 +25,14 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','SecondEchoGenetics')
-min_rate = 21
-n_frames = 40
+#predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','SecondEchoGenetics')
+predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','First_echo')
+
+# This should give us ~70% useful files
+max_frame_time_ms = 33.34 # Maximum frame_time acceptable in ms
+min_rate = 1/max_frame_time_ms*1e3
+min_frames = 40 # Minimum number of frames at min_rate (2 s)
+min_length = max_frame_time_ms*min_frames*1e-3
 batch_size = 32
 
 #%% Some helper functions
@@ -62,8 +67,8 @@ def predict_from_array_list(model, array_list, batch_size):
 #%% Copy image data into memory
 
 # Model info
-meta_date = '200519'
-best_models = pd.read_parquet(os.path.join(predict_dir, 'cfr_models_200611.parquet')).reset_index(drop=True)
+meta_date = '200617'
+best_models = pd.read_parquet(os.path.join(predict_dir, 'cfr_model_correlations_100625.parquet')).reset_index(drop=True)
 model_list = list(best_models.model_name.unique())
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 

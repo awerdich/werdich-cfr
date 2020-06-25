@@ -129,8 +129,8 @@ def predict_from_model(model_dir, epoch_list):
     return test_df, df_pred_model, df_cor_model
 
 #%% Run the predictions and save the outputs
-epoch_list = [50, 100, 150]
-for m, model_dir in enumerate(model_dir_list):
+epoch_list = [100, 150, 200, 300]
+for m, model_dir in enumerate(model_dir_list[:1]):
 
     model_name = os.path.basename(model_dir)
     pred_file_name = model_name + '_pred.parquet'
