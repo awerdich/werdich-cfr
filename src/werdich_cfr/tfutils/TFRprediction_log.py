@@ -17,7 +17,8 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% GPUs
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
+batch_size = 64
 
 #%% Directories and parameters
 data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
@@ -88,7 +89,7 @@ def predict_from_model(model_dir, epoch_list):
             print(f'Predictions from checkpoint {c+1}/{len(checkpoint_file_list)}')
 
             # run predictions in loop over checkpoint files
-            pred_df = VT.predict_on_test(test_tfr_file_list, checkpoint_file, batch_size=12)
+            pred_df = VT.predict_on_test(test_tfr_file_list, checkpoint_file, batch_size=batch_size)
 
             # reshape df
             checkpoint_name = os.path.basename(checkpoint_file).split('.')[0]
@@ -129,7 +130,7 @@ def predict_from_model(model_dir, epoch_list):
     return test_df, df_pred_model, df_cor_model
 
 #%% Run the predictions and save the outputs
-epoch_list = [100, 150, 200, 300]
+epoch_list = [100, 150, 200, 250, 300]
 for m, model_dir in enumerate(model_dir_list[:1]):
 
     model_name = os.path.basename(model_dir)
