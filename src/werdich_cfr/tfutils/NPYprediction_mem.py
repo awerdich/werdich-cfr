@@ -22,18 +22,27 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 
 #%% Directories and parameters
 
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-#predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','SecondEchoGenetics')
-predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','First_echo')
+predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','SecondEchoGenetics')
+#predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','First_echo')
 
 # This should give us ~70% useful files
 max_frame_time_ms = 33.34 # Maximum frame_time acceptable in ms
 min_rate = 1/max_frame_time_ms*1e3
 min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = max_frame_time_ms*min_frames*1e-3
-batch_size = 32
+batch_size = 8
+
+# Model info
+# This meta_date should correspond to the meta data used for trainin (dictionaries)
+meta_date = '200617'
+best_models = pd.read_parquet(os.path.join(cfr_data_root, 'predictions',
+                                           'cfr_correlations_bestmodels_30FPS.parquet')).reset_index(drop=True)
+
+model_list = list(best_models.model_name.unique())
+meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
 #%% Some helper functions
 
@@ -66,12 +75,6 @@ def predict_from_array_list(model, array_list, batch_size):
 
 #%% Copy image data into memory
 
-# Model info
-meta_date = '200617'
-best_models = pd.read_parquet(os.path.join(predict_dir, 'cfr_model_correlations_100625.parquet')).reset_index(drop=True)
-model_list = list(best_models.model_name.unique())
-meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
-
 # File list for test data depends on the model
 #dset = 'nondefect'
 #model_list = [model for model in model_list if model.split('_')[0]==dset]
@@ -83,14 +86,15 @@ meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 
 # File list with .npy.lz4 files
 # NPY file list
-echo_df_file = os.path.join(predict_dir, 'a4cname_MGH_a4c.parquet')
+echo_df_file = os.path.join(predict_dir, 'a4cname_MGHBWH_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
 file_list = list(echo_df.filename.unique())
 
 print(f'Running inference on: {os.path.basename(echo_df_file)}.')
 
 # Image processing class
-vc = Videoconverter(min_rate=min_rate, min_frames=n_frames, meta_df=echo_df)
+#max_frame_time_ms, min_frames, meta_df)
+vc = Videoconverter(max_frame_time_ms=max_frame_time_ms, min_frames=min_frames, meta_df=echo_df)
 
 image_array_file_list = []
 image_array_list = []
@@ -101,13 +105,14 @@ for f, filename in enumerate(file_list):
     if (f+1) % 100 == 0:
         print(f'Loading file {f+1} of {len(file_list)}: {filename}.')
 
-    im = vc.process_video(filename)
+    error, im = vc.process_video(filename)
 
     if np.any(im):
         image_array_list.append((im, np.asarray(im.shape, np.int32)))
         image_array_file_list.append(filename)
     else:
-        meta_disqualified_list.append(echo_df[echo_df.filename==filename])
+        echo_df_file = echo_df[echo_df.filename==filename].assign(err=[error])
+        meta_disqualified_list.append(echo_df_file)
         print('Skipping this one.')
 
 if len(meta_disqualified_list)>0:
