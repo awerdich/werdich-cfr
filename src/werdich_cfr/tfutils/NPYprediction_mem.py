@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 import glob
 import pandas as pd
+import time
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 50)
@@ -33,7 +34,7 @@ max_frame_time_ms = 33.34 # Maximum frame_time acceptable in ms
 min_rate = 1/max_frame_time_ms*1e3
 min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = max_frame_time_ms*min_frames*1e-3
-batch_size = 8
+batch_size = 56
 
 # Model info
 # This meta_date should correspond to the meta data used for trainin (dictionaries)
@@ -88,7 +89,7 @@ def predict_from_array_list(model, array_list, batch_size):
 # NPY file list
 echo_df_file = os.path.join(predict_dir, 'a4cname_MGHBWH_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
-file_list = list(echo_df.filename.unique())
+file_list = list(echo_df.filename.unique())[:50]
 
 print(f'Running inference on: {os.path.basename(echo_df_file)}.')
 
@@ -99,11 +100,12 @@ vc = Videoconverter(max_frame_time_ms=max_frame_time_ms, min_frames=min_frames, 
 image_array_file_list = []
 image_array_list = []
 meta_disqualified_list = []
-
+start_time = time.perf_counter()
 for f, filename in enumerate(file_list):
 
-    if (f+1) % 100 == 0:
-        print(f'Loading file {f+1} of {len(file_list)}: {filename}.')
+    if (f+1) % 10 == 0:
+        time_passed = (time.perf_counter()-start_time)/60
+        print(f'Loading file {f+1} of {len(file_list)}: {filename}. Time: {time_passed:.2f}')
 
     error, im = vc.process_video(filename)
 
@@ -111,8 +113,8 @@ for f, filename in enumerate(file_list):
         image_array_list.append((im, np.asarray(im.shape, np.int32)))
         image_array_file_list.append(filename)
     else:
-        echo_df_file = echo_df[echo_df.filename==filename].assign(err=[error])
-        meta_disqualified_list.append(echo_df_file)
+        echo_df_fl = echo_df[echo_df.filename==filename].assign(err=[error])
+        meta_disqualified_list.append(echo_df_fl)
         print('Skipping this one.')
 
 if len(meta_disqualified_list)>0:
@@ -137,7 +139,7 @@ for m, model_name in enumerate(model_list):
     model_name = model_s.model_name
     tfr_dir = os.path.join(cfr_data_root, 'tfr_'+meta_date, dset)
     log_dir = os.path.join(cfr_data_root, 'log', model_name)
-    checkpoint_file = model_s.chechkpoint_file
+    checkpoint_file = model_s.checkpoint_file
 
     print('Loading model from checkpoint {}.'.format(os.path.basename(checkpoint_file)))
     model = load_model(checkpoint_file)
