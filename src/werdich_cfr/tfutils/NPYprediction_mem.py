@@ -176,7 +176,7 @@ for m, model_name in enumerate(model_list):
     # Merge output predictions and save data
     pred_df = pred_df_c.merge(right=echo_df, on='filename', how='left').reset_index(drop=True)
 
-    video_list_file_name = os.path.basename(echo_df_file).split('.')[0]+'_'+model_output+'.parquet'
-    video_list_file = os.path.join(predict_dir, video_list_file_name)
+    video_list_file_name = model_name+'.parquet'
+    video_list_file = os.path.join(predict_dir, 'cfr_models_30fps', video_list_file_name)
 
     pred_df.to_parquet(video_list_file)
