@@ -26,8 +26,11 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-#predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','SecondEchoGenetics')
-predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','FirstEcho')
+predict_dir = os.path.join(cfr_data_root,
+                           'predictions_echodata','SecondEchoGenetics',
+                           'cfr_models_30fps', 'disqualified_deltaX')
+
+#predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','FirstEcho')
 
 # This should give us ~70% useful files
 max_frame_time_ms = 33.34 # Maximum frame_time acceptable in ms
@@ -87,9 +90,9 @@ def predict_from_array_list(model, array_list, batch_size):
 
 # File list with .npy.lz4 files
 # NPY file list
-echo_df_file = os.path.join(predict_dir, 'BWH_2015-05-01_2015-10-31_FirstEcho_a4c.parquet')
+echo_df_file = os.path.join(predict_dir, 'a4cname_MGHBWH_a4c_disqualified.parquet')
 echo_df = pd.read_parquet(echo_df_file)
-file_list = list(echo_df.filename.unique())[:50]
+file_list = list(echo_df.filename.unique())
 
 print(f'Running inference on: {os.path.basename(echo_df_file)}.')
 
