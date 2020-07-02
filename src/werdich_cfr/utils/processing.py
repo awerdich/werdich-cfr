@@ -80,8 +80,8 @@ class Videoconverter:
         output_array = np.zeros(1)
         error=None
         if meta.shape[0] > 0:
-            deltaX = meta.deltaX.values[0]
-            deltaY = meta.deltaY.values[0]
+            deltaX = np.abs(meta.deltaX.values[0])
+            deltaY = np.abs(meta.deltaY.values[0])
             if (0 < deltaX) & (deltaX < 1) & (0 < deltaY) & (deltaY < 1):
                 frame_time = meta.frame_time.values[0] * 1e-3
                 rate = 1 / frame_time
