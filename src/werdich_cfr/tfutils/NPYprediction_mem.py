@@ -26,11 +26,7 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-predict_dir = os.path.join(cfr_data_root,
-                           'predictions_echodata','SecondEchoGenetics',
-                           'cfr_models_30fps', 'disqualified_deltaX')
-
-#predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','FirstEcho')
+predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','FirstEchoEvents2')
 
 # This should give us ~70% useful files
 max_frame_time_ms = 33.34 # Maximum frame_time acceptable in ms
@@ -42,8 +38,7 @@ batch_size = 14
 # Model info
 # This meta_date should correspond to the meta data used for trainin (dictionaries)
 meta_date = '200617'
-best_models = pd.read_parquet(os.path.join(cfr_data_root, 'predictions',
-                                           'cfr_correlations_bestmodels_30FPS.parquet')).reset_index(drop=True)
+best_models = pd.read_parquet(os.path.join(predict_dir, 'cfr_correlations_bestmodels_30FPS.parquet')).reset_index(drop=True)
 
 model_list = list(best_models.model_name.unique())
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
@@ -90,7 +85,7 @@ def predict_from_array_list(model, array_list, batch_size):
 
 # File list with .npy.lz4 files
 # NPY file list
-echo_df_file = os.path.join(predict_dir, 'a4cname_MGHBWH_a4c_disqualified.parquet')
+echo_df_file = os.path.join(predict_dir, 'BWH_2015-06-01_2015-11-30_FirstEcho_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
 file_list = list(echo_df.filename.unique())
 
