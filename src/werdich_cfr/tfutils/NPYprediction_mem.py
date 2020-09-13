@@ -36,7 +36,7 @@ min_length = max_frame_time_ms*min_frames*1e-3
 batch_size = 14
 
 # Model info
-# This meta_date should correspond to the meta data used for trainin (dictionaries)
+# This meta_date should correspond to the meta data used for training (dictionaries)
 meta_date = '200617'
 best_models = pd.read_parquet(os.path.join(predict_dir, 'cfr_correlations_bestmodels_30FPS.parquet')).reset_index(drop=True)
 
