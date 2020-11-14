@@ -26,14 +26,14 @@ from werdich_cfr.tfutils.tfutils import use_gpu_devices
 physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
 
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','FirstEchoEvents2')
+predict_dir = os.path.join(cfr_data_root, 'predictions_echodata','FirstEchoEvents2repeat')
 
 # This should give us ~70% useful files
 max_frame_time_ms = 33.34 # Maximum frame_time acceptable in ms
 min_rate = 1/max_frame_time_ms*1e3
 min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = max_frame_time_ms*min_frames*1e-3
-batch_size = 14
+batch_size = 8
 
 # Model info
 # This meta_date should correspond to the meta data used for training (dictionaries)
@@ -87,7 +87,7 @@ def predict_from_array_list(model, array_list, batch_size):
 # NPY file list
 echo_df_file = os.path.join(predict_dir, 'BWH_2015-06-01_2015-11-30_FirstEcho_a4c.parquet')
 echo_df = pd.read_parquet(echo_df_file)
-file_list = list(echo_df.filename.unique())
+file_list = list(echo_df.filename.unique())[:100]
 
 print(f'Running inference on: {os.path.basename(echo_df_file)}.')
 
@@ -115,7 +115,7 @@ for f, filename in enumerate(file_list):
         meta_disqualified_list.append(echo_df_fl)
         print('Skipping this one.')
 
-if len(meta_disqualified_list)>0:
+if len(meta_disqualified_list) > 0:
     echo_df_disqualified = pd.concat(meta_disqualified_list, ignore_index=True).reset_index(drop=True)
     # Save disqualified metadata
     print(f'Found {echo_df_disqualified.shape[0]} of {len(file_list)} disqualified videos.')
