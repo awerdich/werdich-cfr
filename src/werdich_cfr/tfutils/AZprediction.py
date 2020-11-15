@@ -8,7 +8,6 @@ Compile all data as .npy array and expand into memory
 import os
 import numpy as np
 import pickle
-import glob
 import pandas as pd
 import time
 
@@ -42,8 +41,8 @@ def predict_from_array_list(model, model_dict, feature_dict, array_list, batch_s
     Predict from list of echo videos
     model: compiled (or loaded from checkpoint) keras model
     model_dict: dict with model hyperparameters
-    feture_dict: names of input and output tensors
-    array_list: list of np.ndarray videos
+    feature_dict: names of input and output tensors
+    array_list: list of tuples with video and shape (array, array.shape)
     '''
 
     im_generator = get_im_generator(array_list)
@@ -72,7 +71,7 @@ min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = max_frame_time_ms*min_frames*1e-3
 
 # GPU parameters
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1')
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
 batch_size = 8
 
 # Directory for metadata, predictions
@@ -80,17 +79,30 @@ cfr_project_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr_AZ')
 predict_dir = os.path.join(cfr_project_dir, 'predictions')
 meta_date = '200617'
 
+# Video list
+az_dir = os.path.normpath('/mnt/obi0/sgoto/AZ_Project')
+az_echo_dir = os.path.join(az_dir, 'npyFiles')
+video_meta_file_name = 'metadata.tsv'
+video_meta_file = os.path.join(az_dir, video_meta_file_name)
+video_meta_df = pd.read_csv(video_meta_file, sep='\t')
+# Some small adjustments to this data frame
+video_meta_df = video_meta_df.dropna(subset=['frametime']).\
+    rename(columns={'frametime': 'frame_time'}).\
+    reset_index(drop=True)
+video_meta_df['filename'] = video_meta_df['filename']+'.npy.lz4'
+video_meta_df['dir'] = az_echo_dir
+file_list = list(video_meta_df.filename.unique())
+
+#video_meta_file_name = 'bwh_metadata.parquet'
+#video_meta_file = os.path.join(cfr_project_dir, video_meta_file_name)
+#video_meta_df = pd.read_parquet(os.path.join(video_meta_file))
+#file_list = list(video_meta_df.filename.unique())
+
 # Model names and checkpoint files
 model_dir = os.path.join(cfr_project_dir, 'models')
 checkpoint_list = 'cfr_correlations_bestmodels_30FPS.parquet'
 checkpoint_df = pd.read_parquet(os.path.join(cfr_project_dir, 'models', checkpoint_list))
 model_list = sorted(list(checkpoint_df.model_name.unique()))
-
-# Video list
-video_meta_file_name = 'bwh_metadata.parquet'
-video_meta_file = os.path.join(cfr_project_dir, video_meta_file_name)
-video_meta_df = pd.read_parquet(os.path.join(video_meta_file))
-file_list = list(video_meta_df.filename.unique())
 
 # Features for the model
 feature_dict_name = 'feature_dict_' + 'tfr_' + meta_date+'.pkl'
