@@ -71,8 +71,8 @@ min_frames = 40 # Minimum number of frames at min_rate (2 s)
 min_length = max_frame_time_ms*min_frames*1e-3
 
 # GPU parameters
-physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3')
-batch_size = 8
+physical_devices, device_list = use_gpu_devices(gpu_device_string='0,1,2,3,4,5,6,7')
+batch_size = 32
 
 # Directory for metadata, predictions
 cfr_project_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr_AZ')
