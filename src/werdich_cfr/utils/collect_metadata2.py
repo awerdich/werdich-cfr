@@ -12,19 +12,19 @@ import lz4.frame
 
 #%% files and paths
 cfr_data_root = os.path.normpath('/mnt/obi0/andreas/data/cfr')
-meta_date = '201215'
-location = 'MGH'
+meta_date = '200617'
+location = 'BWH'
 meta_dir = os.path.join(cfr_data_root, 'metadata_'+meta_date)
 file_df_file = 'echo_'+location+'_npy_feather_files_'+meta_date+'.parquet'
 
 # Use the final data set to filter the studies that we need
-#echo_npyFiles_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/predictions_echodata/FirstEcho')
-#echo_npyFiles = os.path.join(echo_npyFiles_dir, 'echo_BWH_npy_feather_files_200617.parquet')
-#dataset = pd.read_parquet(echo_npyFiles)
-#filter_study_list = list(dataset.study.unique())
+echo_npyFiles_dir = os.path.normpath('/mnt/obi0/andreas/data/cfr/predictions_echodata/FirstEcho')
+echo_npyFiles = os.path.join(echo_npyFiles_dir, 'echo_BWH_npy_feather_files_eventechos_200617.parquet')
+dataset = pd.read_parquet(echo_npyFiles)
+filter_study_list = list(dataset.study.unique())
 
 # Output file
-meta_filename = 'echo_'+location+'_meta_'+meta_date+'.parquet'
+meta_filename = 'echo_'+location+'_meta_eventechos_'+meta_date+'.parquet'
 
 # Some feather files contain None where the file names should be. Lets collect them.
 empty_feather_list = []
@@ -38,7 +38,7 @@ feather_dsc_list = ['video_metadata_withScale', 'viewPredictionsVideo_withRV', '
 file_df2 = file_df[file_df.dsc.isin(feather_dsc_list)]
 
 # Filter by the list of echos that we need (SPECIAL)
-#file_df2 = file_df2[file_df2.study.isin(filter_study_list)]
+file_df2 = file_df2[file_df2.study.isin(filter_study_list)]
 
 print('Collecting metadata from df: {}'.format(file_df_file))
 print('Number of unique npy files: {}'.format(len(file_df2.filename.unique())))
